@@ -2,7 +2,6 @@ package hertz
 
 import (
 	"context"
-	"fmt"
 	"reflect"
 	"strings"
 
@@ -103,8 +102,6 @@ func GetHandler(handler interface{}, annotations ...*Annotation) app.HandlerFunc
 		hCtx := NewHertzContext(c)
 		saCtx := core.NewContext(hCtx, stputil.GetManager())
 		token := saCtx.GetTokenValue()
-
-		fmt.Printf("Debug Handler: token='%s', isLogin=%v, headers=%v\n", token, stputil.IsLogin(token), c.Request.Header.String())
 
 		if token == "" {
 			writeErrorResponse(c, core.NewNotLoginError())

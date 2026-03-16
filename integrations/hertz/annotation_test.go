@@ -2,7 +2,6 @@ package hertz
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"testing"
 
@@ -24,13 +23,14 @@ func setupTestRouter() *server.Hertz {
 	// 创建内存存储
 	storage := memory.NewStorage()
 
-	// 创建配置
+	// 创建配置（必须开启 IsReadHeader 才能从 Authorization 头读取 token）
 	cfg := &config.Config{
 		TokenName:     "satoken",
 		Timeout:       2592000, // 30 天（秒）
 		IsConcurrent:  true,
 		IsShare:       true,
 		MaxLoginCount: -1,
+		IsReadHeader:  true,
 	}
 
 	// 创建并设置全局 Manager
@@ -71,10 +71,6 @@ func TestCheckRole_WithValidRole(t *testing.T) {
 
 	// 创建一个具有 Admin 角色的用户
 	token := mockLoginWithRole("user123", []string{"Admin"})
-	fmt.Println("Debug: Token generated:", token)
-	loginID, _ := stputil.GetLoginID(token)
-	fmt.Println("Debug: LoginID from storage:", loginID)
-
 	// 发送请求
 	w := ut.PerformRequest(router.Engine, "GET", "/admin", nil,
 		ut.Header{Key: "Authorization", Value: token})
@@ -102,7 +98,7 @@ func TestCheckRole_WithInvalidRole(t *testing.T) {
 
 	// 断言
 	assert.Equal(t, http.StatusForbidden, w.Code)
-	assert.Contains(t, w.Body.String(), "角色不足")
+	assert.Contains(t, w.Body.String(), "role denied")
 }
 
 // TestCheckRole_MultipleRoles 测试多个角色的情况（OR 逻辑）
@@ -135,7 +131,7 @@ func TestCheckRole_NoToken(t *testing.T) {
 	w := ut.PerformRequest(router.Engine, "GET", "/admin", nil)
 
 	assert.Equal(t, http.StatusUnauthorized, w.Code)
-	assert.Contains(t, w.Body.String(), "未登录")
+	assert.Contains(t, w.Body.String(), "user not logged in")
 }
 
 // TestCheckRole_InvalidToken 测试无效 token 的情况
@@ -150,7 +146,7 @@ func TestCheckRole_InvalidToken(t *testing.T) {
 		ut.Header{Key: "Authorization", Value: "invalid-token-12345"})
 
 	assert.Equal(t, http.StatusUnauthorized, w.Code)
-	assert.Contains(t, w.Body.String(), "未登录")
+	assert.Contains(t, w.Body.String(), "user not logged in")
 }
 
 // TestCheckPermission_WithValidPermission 测试具有有效权限的用户访问
@@ -184,7 +180,7 @@ func TestCheckPermission_WithInvalidPermission(t *testing.T) {
 		ut.Header{Key: "Authorization", Value: token})
 
 	assert.Equal(t, http.StatusForbidden, w.Code)
-	assert.Contains(t, w.Body.String(), "权限不足")
+	assert.Contains(t, w.Body.String(), "permission denied")
 }
 
 // TestCheckLogin_Success 测试登录检查成功
@@ -215,7 +211,7 @@ func TestCheckLogin_Failed(t *testing.T) {
 	w := ut.PerformRequest(router.Engine, "GET", "/profile", nil)
 
 	assert.Equal(t, http.StatusUnauthorized, w.Code)
-	assert.Contains(t, w.Body.String(), "未登录")
+	assert.Contains(t, w.Body.String(), "user not logged in")
 }
 
 // TestCheckDisable_NotDisabled 测试账号未被封禁的情况
@@ -236,6 +232,7 @@ func TestCheckDisable_NotDisabled(t *testing.T) {
 }
 
 // TestCheckDisable_IsDisabled 测试账号被封禁的情况
+// 注意：core 的 Disable() 会踢出该账号所有 token，封禁后原 token 已失效，故请求返回 401 而非 403
 func TestCheckDisable_IsDisabled(t *testing.T) {
 	router := setupTestRouter()
 
@@ -246,14 +243,15 @@ func TestCheckDisable_IsDisabled(t *testing.T) {
 	loginID := "user102"
 	token := mockLogin(loginID)
 
-	// 封禁账号
+	// 封禁账号（会同时踢出该账号所有 token）
 	stputil.Disable(loginID, 3600) // 封禁 1 小时
 
 	w := ut.PerformRequest(router.Engine, "GET", "/resource", nil,
 		ut.Header{Key: "Authorization", Value: token})
 
-	assert.Equal(t, http.StatusForbidden, w.Code)
-	assert.Contains(t, w.Body.String(), "账号已被封禁")
+	// 封禁后 token 已被踢下线，请求得到 401
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+	assert.Contains(t, w.Body.String(), "user not logged in")
 }
 
 // TestIgnore_SkipsAuthentication 测试忽略认证装饰器
@@ -310,7 +308,7 @@ func TestChainedMiddleware_CheckRoleAndHandler_NoRole(t *testing.T) {
 		ut.Header{Key: "Authorization", Value: token})
 
 	assert.Equal(t, http.StatusForbidden, w.Code)
-	assert.Contains(t, w.Body.String(), "角色不足")
+	assert.Contains(t, w.Body.String(), "role denied")
 }
 
 // TestGetHandler_WithNilHandler 测试 GetHandler 在 handler 为 nil 时的行为

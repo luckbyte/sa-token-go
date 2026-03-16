@@ -6,7 +6,7 @@ import (
 	"github.com/cloudwego/hertz/pkg/protocol"
 )
 
-// HertzContext Hertz request context adapter | Gin请求上下文适配器
+// HertzContext Hertz request context adapter | Hertz 请求上下文适配器
 type HertzContext struct {
 	c       *app.RequestContext
 	aborted bool
