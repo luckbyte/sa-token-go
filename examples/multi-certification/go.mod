@@ -3,9 +3,9 @@ module github.com/click33/sa-token-go/examples/multi-certification
 go 1.25.3
 
 require (
-	github.com/click33/sa-token-go/core v0.1.6
-	github.com/click33/sa-token-go/storage/memory v0.1.6
-	github.com/click33/sa-token-go/stputil v0.1.6
+	github.com/click33/sa-token-go/core v0.1.8
+	github.com/click33/sa-token-go/storage/memory v0.1.8
+	github.com/click33/sa-token-go/stputil v0.1.8
 )
 
 require (
