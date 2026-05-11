@@ -35,19 +35,19 @@ A lightweight, high-performance Go authentication and authorization framework, i
 
 ```bash
 # Import only the framework integration (includes core + stputil automatically)
-go get github.com/click33/sa-token-go/integrations/gin@latest   # Gin framework
+go get github.com/click33/sa-token-go/integrations/gin@latest    # Gin framework
 # or
-go get github.com/click33/sa-token-go/integrations/echo@latest  # Echo framework
+go get github.com/click33/sa-token-go/integrations/echo@latest   # Echo framework
 # or
-go get github.com/click33/sa-token-go/integrations/fiber@latest # Fiber framework
+go get github.com/click33/sa-token-go/integrations/fiber@latest  # Fiber framework
 # or
-go get github.com/click33/sa-token-go/integrations/chi@latest   # Chi framework
+go get github.com/click33/sa-token-go/integrations/chi@latest    # Chi framework
 # or
-go get github.com/click33/sa-token-go/integrations/gf@latest    # GoFrame framework
+go get github.com/click33/sa-token-go/integrations/gf@latest     # GoFrame framework
 # or
-go get github.com/click33/sa-token-go/integrations/kratos@latest    # Kratos framework
+go get github.com/click33/sa-token-go/integrations/kratos@latest # Kratos framework
 # or
-go get github.com/click33/sa-token-go/integrations/hertz@latest # Hertz framework
+go get github.com/click33/sa-token-go/integrations/hertz@latest  # Hertz framework
 ```
 
 # Storage module (choose one)
@@ -67,13 +67,13 @@ go get github.com/click33/sa-token-go/storage/memory@latest # Memory storage (de
 go get github.com/click33/sa-token-go/storage/redis@latest  # Redis storage (prod)
 
 # Framework integration (optional)
-go get github.com/click33/sa-token-go/integrations/gin@latest   # Gin framework
-go get github.com/click33/sa-token-go/integrations/echo@latest  # Echo framework
-go get github.com/click33/sa-token-go/integrations/fiber@latest # Fiber framework
-go get github.com/click33/sa-token-go/integrations/chi@latest   # Chi framework
-go get github.com/click33/sa-token-go/integrations/gf@latest    # GoFrame framework
-go get github.com/click33/sa-token-go/integrations/kratos@latest# Kratos framework
-go get github.com/click33/sa-token-go/integrations/hertz@latest # Hertz framework
+go get github.com/click33/sa-token-go/integrations/gin@latest    # Gin framework
+go get github.com/click33/sa-token-go/integrations/echo@latest   # Echo framework
+go get github.com/click33/sa-token-go/integrations/fiber@latest  # Fiber framework
+go get github.com/click33/sa-token-go/integrations/chi@latest    # Chi framework
+go get github.com/click33/sa-token-go/integrations/gf@latest     # GoFrame framework
+go get github.com/click33/sa-token-go/integrations/kratos@latest # Kratos framework
+go get github.com/click33/sa-token-go/integrations/hertz@latest  # Hertz framework
 ```
 
 ### ⚡ Minimal Usage (One-line Initialization)
@@ -558,7 +558,10 @@ sa-token-go/
 │   ├── gin/                # Gin integration (with annotations)
 │   ├── echo/               # Echo integration
 │   ├── fiber/              # Fiber integration
-│   └── chi/                # Chi integration
+│   ├── chi/                # Chi integration
+│   ├── gf/                 # GoFrame integration
+│   ├── kratos/             # Kratos integration
+│   └── hertz/              # Hertz integration
 │
 ├── examples/               # Example projects
 │   ├── quick-start/        # Quick start
@@ -569,7 +572,7 @@ sa-token-go/
 │   ├── jwt-example/        # JWT example
 │   ├── redis-example/      # Redis example
 │   ├── listener-example/   # Event listener example
-│   └── gin/echo/fiber/chi/ # Framework integration examples
+│   └── gin/echo/fiber/chi/gf/kratos/hertz/ # Framework integration examples
 │
 └── docs/                   # Documentation
     ├── tutorial/           # Tutorials
@@ -620,7 +623,9 @@ sa-token-go/
 | 🌐 Echo Integration | Echo framework integration | [examples/echo/](examples/echo/) |
 | 🌐 Fiber Integration | Fiber framework integration | [examples/fiber/](examples/fiber/) |
 | 🌐 Chi Integration | Chi framework integration | [examples/chi/](examples/chi/) |
-| 🌐 GoFrame Integration | GoFrame framework integration | [examples/gf/](examples/gf/) |
+| 🌐 GF Integration | GF framework integration | [examples/gf/](examples/gf/) |
+| 🌐 Kratos Integration | Kratos framework integration | [examples/kratos/](examples/kratos/) |
+| 🌐 Hertz Integration | Hertz framework integration | [examples/hertz/](examples/hertz/) |
 
 ### 💾 Storage Options
 

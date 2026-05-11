@@ -41,19 +41,19 @@
 
 ```bash
 # 只导入框架集成包（自动包含 core + stputil）
-go get github.com/click33/sa-token-go/integrations/gin@latest   # Gin框架
+go get github.com/click33/sa-token-go/integrations/gin@latest    # Gin框架
 # 或
-go get github.com/click33/sa-token-go/integrations/echo@latest  # Echo框架
+go get github.com/click33/sa-token-go/integrations/echo@latest   # Echo框架
 # 或
-go get github.com/click33/sa-token-go/integrations/fiber@latest # Fiber框架
+go get github.com/click33/sa-token-go/integrations/fiber@latest  # Fiber框架
 # 或
-go get github.com/click33/sa-token-go/integrations/chi@latest   # Chi框架
+go get github.com/click33/sa-token-go/integrations/chi@latest    # Chi框架
 # 或
-go get github.com/click33/sa-token-go/integrations/gf@latest    # GoFrame框架
+go get github.com/click33/sa-token-go/integrations/gf@latest     # GoFrame框架
 # 或
-go get github.com/click33/sa-token-go/integrations/kratos@latest# Kratos框架
+go get github.com/click33/sa-token-go/integrations/kratos@latest # Kratos框架
 # 或
-go get github.com/click33/sa-token-go/integrations/hertz@latest # Hertz框架
+go get github.com/click33/sa-token-go/integrations/hertz@latest  # Hertz框架
 
 # 存储模块（选一个）
 go get github.com/click33/sa-token-go/storage/memory@latest # 内存存储（开发）
@@ -72,13 +72,13 @@ go get github.com/click33/sa-token-go/storage/memory@latest # 内存存储（开
 go get github.com/click33/sa-token-go/storage/redis@latest  # Redis存储（生产）
 
 # 框架集成（可选）
-go get github.com/click33/sa-token-go/integrations/gin@latest   # Gin框架
-go get github.com/click33/sa-token-go/integrations/echo@latest  # Echo框架
-go get github.com/click33/sa-token-go/integrations/fiber@latest # Fiber框架
-go get github.com/click33/sa-token-go/integrations/chi@latest   # Chi框架
-go get github.com/click33/sa-token-go/integrations/gf@latest    # GoFrame框架
-go get github.com/click33/sa-token-go/integrations/kratos@latest# Kratos框架
-go get github.com/click33/sa-token-go/integrations/hertz@latest # Hertz框架
+go get github.com/click33/sa-token-go/integrations/gin@latest    # Gin框架
+go get github.com/click33/sa-token-go/integrations/echo@latest   # Echo框架
+go get github.com/click33/sa-token-go/integrations/fiber@latest  # Fiber框架
+go get github.com/click33/sa-token-go/integrations/chi@latest    # Chi框架
+go get github.com/click33/sa-token-go/integrations/gf@latest     # GoFrame框架
+go get github.com/click33/sa-token-go/integrations/kratos@latest # Kratos框架
+go get github.com/click33/sa-token-go/integrations/hertz@latest  # Hertz框架
 ```
 
 ### ⚡ 超简洁使用（一行初始化）
@@ -571,7 +571,9 @@ sa-token-go/
 │   ├── echo/               # Echo集成
 │   ├── fiber/              # Fiber集成
 │   ├── chi/                # Chi集成
-│   └── gf/                 # GoFrame集成
+│   ├── gf/                 # GoFrame集成
+│   ├── kratos/             # Kratos集成
+│   └── hertz/              # Hertz集成
 │
 ├── examples/               # 示例项目
 │   ├── quick-start/        # 快速开始
@@ -582,7 +584,7 @@ sa-token-go/
 │   ├── jwt-example/        # JWT示例
 │   ├── redis-example/      # Redis示例
 │   ├── listener-example/   # 事件监听示例
-│   └── gin/echo/fiber/chi/ # 框架集成示例
+│   └── gin/echo/fiber/chi/gf/kratos/hertz/ # 框架集成示例
 │
 └── docs/                   # 文档
     ├── tutorial/           # 教程
@@ -634,6 +636,8 @@ sa-token-go/
 | 🌐 Fiber集成 | Fiber框架集成 | [examples/fiber/](examples/fiber/) |
 | 🌐 Chi集成 | Chi框架集成 | [examples/chi/](examples/chi/) |
 | 🌐 GoFrame集成 | GoFrame框架集成 | [examples/gf/](examples/gf/) |
+| 🌐 Kratos集成 | Kratos框架集成 | [examples/kratos/](examples/kratos/) |
+| 🌐 Hertz集成 | Hertz框架集成 | [examples/hertz/](examples/hertz/) |
 
 ### 💾 存储方案
 
