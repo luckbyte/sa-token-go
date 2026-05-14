@@ -1,7 +1,7 @@
 module github.com/click33/sa-token-go/storage/memory
 
-go 1.24.0
+go 1.25.0
 
-require github.com/click33/sa-token-go/core v0.1.8
+require github.com/click33/sa-token-go/core v0.1.9
 
 replace github.com/click33/sa-token-go/core => ../../core
