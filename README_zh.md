@@ -41,44 +41,44 @@
 
 ```bash
 # 只导入框架集成包（自动包含 core + stputil）
-go get github.com/click33/sa-token-go/integrations/gin@latest   # Gin框架
+go get github.com/sa-tokens/sa-token-go/integrations/gin@latest   # Gin框架
 # 或
-go get github.com/click33/sa-token-go/integrations/echo@latest  # Echo框架
+go get github.com/sa-tokens/sa-token-go/integrations/echo@latest  # Echo框架
 # 或
-go get github.com/click33/sa-token-go/integrations/fiber@latest # Fiber框架
+go get github.com/sa-tokens/sa-token-go/integrations/fiber@latest # Fiber框架
 # 或
-go get github.com/click33/sa-token-go/integrations/chi@latest   # Chi框架
+go get github.com/sa-tokens/sa-token-go/integrations/chi@latest   # Chi框架
 # 或
-go get github.com/click33/sa-token-go/integrations/gf@latest    # GoFrame框架
+go get github.com/sa-tokens/sa-token-go/integrations/gf@latest    # GoFrame框架
 # 或
-go get github.com/click33/sa-token-go/integrations/kratos@latest# Kratos框架
+go get github.com/sa-tokens/sa-token-go/integrations/kratos@latest# Kratos框架
 # 或
-go get github.com/click33/sa-token-go/integrations/hertz@latest # Hertz框架
+go get github.com/sa-tokens/sa-token-go/integrations/hertz@latest # Hertz框架
 
 # 存储模块（选一个）
-go get github.com/click33/sa-token-go/storage/memory@latest # 内存存储（开发）
-go get github.com/click33/sa-token-go/storage/redis@latest  # Redis存储（生产）
+go get github.com/sa-tokens/sa-token-go/storage/memory@latest # 内存存储（开发）
+go get github.com/sa-tokens/sa-token-go/storage/redis@latest  # Redis存储（生产）
 ```
 
 #### 方式二：分开导入
 
 ```bash
 # 核心模块
-go get github.com/click33/sa-token-go/core@vlatest 
-go get github.com/click33/sa-token-go/stputil@vlatest 
+go get github.com/sa-tokens/sa-token-go/core@vlatest 
+go get github.com/sa-tokens/sa-token-go/stputil@vlatest 
 
 # 存储模块（选一个）
-go get github.com/click33/sa-token-go/storage/memory@latest # 内存存储（开发）
-go get github.com/click33/sa-token-go/storage/redis@latest  # Redis存储（生产）
+go get github.com/sa-tokens/sa-token-go/storage/memory@latest # 内存存储（开发）
+go get github.com/sa-tokens/sa-token-go/storage/redis@latest  # Redis存储（生产）
 
 # 框架集成（可选）
-go get github.com/click33/sa-token-go/integrations/gin@latest   # Gin框架
-go get github.com/click33/sa-token-go/integrations/echo@latest  # Echo框架
-go get github.com/click33/sa-token-go/integrations/fiber@latest # Fiber框架
-go get github.com/click33/sa-token-go/integrations/chi@latest   # Chi框架
-go get github.com/click33/sa-token-go/integrations/gf@latest    # GoFrame框架
-go get github.com/click33/sa-token-go/integrations/kratos@latest# Kratos框架
-go get github.com/click33/sa-token-go/integrations/hertz@latest # Hertz框架
+go get github.com/sa-tokens/sa-token-go/integrations/gin@latest   # Gin框架
+go get github.com/sa-tokens/sa-token-go/integrations/echo@latest  # Echo框架
+go get github.com/sa-tokens/sa-token-go/integrations/fiber@latest # Fiber框架
+go get github.com/sa-tokens/sa-token-go/integrations/chi@latest   # Chi框架
+go get github.com/sa-tokens/sa-token-go/integrations/gf@latest    # GoFrame框架
+go get github.com/sa-tokens/sa-token-go/integrations/kratos@latest# Kratos框架
+go get github.com/sa-tokens/sa-token-go/integrations/hertz@latest # Hertz框架
 ```
 
 ### ⚡ 超简洁使用（一行初始化）
@@ -87,9 +87,9 @@ go get github.com/click33/sa-token-go/integrations/hertz@latest # Hertz框架
 package main
 
 import (
-    "github.com/click33/sa-token-go/core"
-    "github.com/click33/sa-token-go/stputil"
-    "github.com/click33/sa-token-go/storage/memory"
+    "github.com/sa-tokens/sa-token-go/core"
+    "github.com/sa-tokens/sa-token-go/stputil"
+    "github.com/sa-tokens/sa-token-go/storage/memory"
 )
 
 func init() {
@@ -243,7 +243,139 @@ isDisabled := stputil.IsDisable(1000)
 remainingTime, _ := stputil.GetDisableTime(1000)
 ```
 
+### 🧩 基于计划能力的进阶 Demo
+
+#### 1）上下文身份链路（Switch + Context Token）
+
+```go
+ctx := context.Background()
+ctx = stputil.SetTokenValueToCtx(ctx, token)
+
+// 默认从上下文 token 解析 loginId
+loginID, err := stputil.GetLoginIDFromCtx(ctx)
+
+// 临时切换身份（优先级高于 token 解析）
+ctx = stputil.SwitchTo(ctx, "admin-1001")
+switchedID, _ := stputil.GetLoginIDFromCtx(ctx) // -> admin-1001
+```
+
+#### 2）二级认证 + 分级封禁
+
+```go
+// 开启二级认证（5分钟）
+_ = stputil.OpenSafe(token, "pay", 300)
+_ = stputil.CheckSafe(token, "pay")
+
+// 分级封禁：service=comment，level=2
+_ = stputil.DisableLevel(1000, "comment", 2, time.Hour)
+_ = stputil.CheckDisableLevel(1000, "comment", 1) // level>=1 即拦截
+```
+
+#### 3）顶号下线 + 终端与检索
+
+```go
+// 按 ReplacedRange 策略执行顶号下线
+_ = stputil.Replaced(1000, "mobile")
+
+// 查询终端、信任设备
+terminals, _ := stputil.GetTerminalListByLoginID(1000)
+isTrusted := stputil.IsTrustDeviceID(1000, "ios-device-id")
+_ = stputil.AddTrustDeviceID(1000, "ios-device-id")
+
+// 检索 token/session
+tokens, _ := stputil.SearchTokenValue("abc", 0, 20, true)
+_ = tokens
+```
+
 ## 🌐 框架集成
+
+### 统一 Token 提取（`plugin-token-interceptor` 改造说明）
+
+设计与落地步骤见仓库内 [.cursor/plans/plugin-token-interceptor_8a06e5ac.plan.md](.cursor/plans/plugin-token-interceptor_8a06e5ac.plan.md)。当前实现要点如下：
+
+1. **`ResolveTokenName` / `ReadTokenFromRequest`** 定义在 [`core/context/context.go`](core/context/context.go)。`SaTokenContext.GetTokenValue()` 内部直接调用 `ReadTokenFromRequest`，保证与集成层、`PathAuth` 同源逻辑。
+2. **`core/satoken.go`** 将 `ResolveTokenName`、`ReadTokenFromRequest` **重导出**到 `core` 根包，各 integration 可使用 `core.ReadTokenFromRequest`，无需额外引用子包别名。
+3. **七个集成插件**（Gin、Echo、Fiber、Hertz、Chi、GoFrame、Kratos）均实现 **`TokenInterceptor()`**：仅用 `core.ReadTokenFromRequest` 解析一次，将结果写入框架上下文键 **`satoken_token`**，**不做登录校验**。业务 Handler 通过 **`GetTokenFromCtx(...)`** 取值。**`PathAuthMiddleware`** 同样改为调用该 helper，避免手写 Header/Cookie 时遗漏 Query、未走 `CutTokenPrefix`、`TokenName` 为空时不回退 `Authorization` 等问题。
+4. **读取顺序**：Header（含名为 `Authorization` 时的 Bearer 剥离；自定义 `TokenName` 时再尝试 `Authorization` Bearer 兜底）→ Cookie → Query（URL 参数传 token / apikey 场景）。每路取值经 **`mgr.CutTokenPrefix`** 处理。是否读 Header/Cookie 受 **`IsReadHeader`** / **`IsReadCookie`** 控制；Query 在前序无命中时尝试。
+
+以下为 `core/context/context.go` 中生产代码的等价摘录（**代码块内注释为中文**）：
+
+```go
+package context
+
+import (
+	"strings"
+
+	"github.com/sa-tokens/sa-token-go/core/adapter"
+	"github.com/sa-tokens/sa-token-go/core/config"
+	"github.com/sa-tokens/sa-token-go/core/manager"
+)
+
+const bearerPrefix = "Bearer "
+const AuthHeaderName = "Authorization"
+
+// ResolveTokenName：配置了非空 TokenName 则用配置，否则回退为 Authorization。
+func ResolveTokenName(cfg *config.Config) string {
+	if cfg != nil && strings.TrimSpace(cfg.TokenName) != "" {
+		return cfg.TokenName
+	}
+	return AuthHeaderName
+}
+
+// extractBearerToken：剥离不区分大小写的前缀 "Bearer "。
+func extractBearerToken(auth string) string {
+	auth = strings.TrimSpace(auth)
+	if auth == "" {
+		return ""
+	}
+	if len(auth) > 7 && strings.EqualFold(auth[:7], bearerPrefix) {
+		return strings.TrimSpace(auth[7:])
+	}
+	return auth
+}
+
+// ReadTokenFromRequest：按 Header → Cookie → Query 读取，并对结果执行 CutTokenPrefix。
+func ReadTokenFromRequest(ctx adapter.RequestContext, mgr *manager.Manager) string {
+	if ctx == nil || mgr == nil {
+		return ""
+	}
+	cfg := mgr.GetConfig()
+	name := ResolveTokenName(cfg)
+
+	readHeader := cfg == nil || cfg.IsReadHeader
+	readCookie := cfg == nil || cfg.IsReadCookie
+
+	if readHeader {
+		if v := strings.TrimSpace(ctx.GetHeader(name)); v != "" {
+			if strings.EqualFold(name, AuthHeaderName) {
+				if t := extractBearerToken(v); t != "" {
+					return mgr.CutTokenPrefix(t)
+				}
+			}
+			return mgr.CutTokenPrefix(v)
+		}
+		if !strings.EqualFold(name, AuthHeaderName) {
+			if auth := strings.TrimSpace(ctx.GetHeader(AuthHeaderName)); auth != "" {
+				if t := extractBearerToken(auth); t != "" {
+					return mgr.CutTokenPrefix(t)
+				}
+			}
+		}
+	}
+
+	if readCookie {
+		if v := strings.TrimSpace(ctx.GetCookie(name)); v != "" {
+			return mgr.CutTokenPrefix(v)
+		}
+	}
+
+	if v := strings.TrimSpace(ctx.GetQuery(name)); v != "" {
+		return mgr.CutTokenPrefix(v)
+	}
+
+	return ""
+}
+```
 
 ### 🌟 Gin 集成（单一导入）
 
@@ -252,8 +384,8 @@ remainingTime, _ := stputil.GetDisableTime(1000)
 ```go
 import (
     "github.com/gin-gonic/gin"
-    sagin "github.com/click33/sa-token-go/integrations/gin"  // 只需这一个导入！
-    "github.com/click33/sa-token-go/storage/memory"
+    sagin "github.com/sa-tokens/sa-token-go/integrations/gin"  // 只需这一个导入！
+    "github.com/sa-tokens/sa-token-go/storage/memory"
 )
 
 func main() {
@@ -262,7 +394,8 @@ func main() {
     config := sagin.DefaultConfig()  // 使用 sagin.DefaultConfig
     manager := sagin.NewManager(storage, config)  // 使用 sagin.NewManager
     sagin.SetManager(manager)  // 使用 sagin.SetManager
-    
+    plugin := sagin.NewPlugin(manager)
+
     r := gin.Default()
     
     // 登录接口
@@ -278,6 +411,16 @@ func main() {
     r.GET("/admin", sagin.CheckPermission("admin:*"), adminHandler)  // 需要权限
     r.GET("/manager", sagin.CheckRole("manager"), managerHandler)    // 需要角色
     r.GET("/sensitive", sagin.CheckDisable(), sensitiveHandler)      // 检查封禁
+
+    // 受保护路由推荐中间件顺序：
+    // 1) TokenInterceptor 统一提取 token（Header/Cookie/Query）
+    // 2) AuthMiddleware 统一校验登录态
+    api := r.Group("/api")
+    api.Use(plugin.TokenInterceptor(), plugin.AuthMiddleware())
+    api.GET("/token", func(c *gin.Context) {
+        // 业务侧直接从上下文读取解析后的 token
+        c.JSON(200, gin.H{"token": sagin.GetTokenFromCtx(c)})
+    })
     
     r.Run(":8080")
 }
@@ -298,7 +441,7 @@ func main() {
 **使用示例：**
 
 ```go
-import sagin "github.com/click33/sa-token-go/integrations/gin"
+import sagin "github.com/sa-tokens/sa-token-go/integrations/gin"
 
 func main() {
     r := gin.Default()
@@ -335,8 +478,8 @@ func main() {
 import (
     "github.com/gogf/gf/v2/frame/g"
     "github.com/gogf/gf/v2/net/ghttp"
-    sagf "github.com/click33/sa-token-go/integrations/gf"  // 只需这一个导入！
-    "github.com/click33/sa-token-go/storage/memory"
+    sagf "github.com/sa-tokens/sa-token-go/integrations/gf"  // 只需这一个导入！
+    "github.com/sa-tokens/sa-token-go/storage/memory"
 )
 
 func main() {
@@ -373,25 +516,30 @@ func main() {
 
 ```go
 // Echo
-import saecho "github.com/click33/sa-token-go/integrations/echo"
+import saecho "github.com/sa-tokens/sa-token-go/integrations/echo"
 e.GET("/user", saecho.CheckLogin(), handler)
 
 // Fiber
-import safiber "github.com/click33/sa-token-go/integrations/fiber"
+import safiber "github.com/sa-tokens/sa-token-go/integrations/fiber"
 app.Get("/user", safiber.CheckLogin(), handler)
 
 // Chi
-import sachi "github.com/click33/sa-token-go/integrations/chi"
+import sachi "github.com/sa-tokens/sa-token-go/integrations/chi"
 r.Get("/user", sachi.CheckLogin(), handler)
 
 // Kratos
-import sakratos "github.com/click33/sa-token-go/integrations/kratos"
+import sakratos "github.com/sa-tokens/sa-token-go/integrations/kratos"
 // 使用 Plugin.Server() 作为中间件
 
 // Hertz
-import sahertz "github.com/click33/sa-token-go/integrations/hertz"
+import sahertz "github.com/sa-tokens/sa-token-go/integrations/hertz"
 h.GET("/user", sahertz.CheckLogin(), handler)
 ```
+
+所有集成插件已统一提供：
+
+- `TokenInterceptor()`：统一 Token 读取顺序（`Header -> Cookie -> Query(apikey)`），并自动处理 `TokenPrefix`。
+- `GetTokenFromCtx(...)`：在处理器中直接获取拦截器解析后的 token，避免重复解析。
 
 ## 🎨 高级特性
 
@@ -571,7 +719,9 @@ sa-token-go/
 │   ├── echo/               # Echo集成
 │   ├── fiber/              # Fiber集成
 │   ├── chi/                # Chi集成
-│   └── gf/                 # GoFrame集成
+│   ├── gf/                 # GoFrame集成
+│   ├── kratos/             # Kratos集成
+│   └── hertz/              # Hertz集成
 │
 ├── examples/               # 示例项目
 │   ├── quick-start/        # 快速开始
@@ -582,7 +732,7 @@ sa-token-go/
 │   ├── jwt-example/        # JWT示例
 │   ├── redis-example/      # Redis示例
 │   ├── listener-example/   # 事件监听示例
-│   └── gin/echo/fiber/chi/ # 框架集成示例
+│   └── gin/echo/fiber/chi/gf/kratos/hertz/ # 框架集成示例
 │
 └── docs/                   # 文档
     ├── tutorial/           # 教程
@@ -629,11 +779,14 @@ sa-token-go/
 | 🔑 JWT示例 | JWT Token使用 | [examples/jwt-example/](examples/jwt-example/) |
 | 💾 Redis示例 | Redis存储配置 | [examples/redis-example/](examples/redis-example/) |
 | 🎧 事件监听 | 事件系统使用 | [examples/listener-example/](examples/listener-example/) |
-| 🌐 Gin集成 | Gin框架完整集成 | [examples/gin/](examples/gin/) |
-| 🌐 Echo集成 | Echo框架集成 | [examples/echo/](examples/echo/) |
-| 🌐 Fiber集成 | Fiber框架集成 | [examples/fiber/](examples/fiber/) |
-| 🌐 Chi集成 | Chi框架集成 | [examples/chi/](examples/chi/) |
+| 🌐 Gin（简版） | Gin 最简集成示例 | [examples/gin/gin-simple/](examples/gin/gin-simple/) |
+| 🌐 Gin（完整） | Gin 配置化集成示例 | [examples/gin/gin-example/](examples/gin/gin-example/) |
+| 🌐 Echo集成 | Echo框架集成 | [examples/echo/echo-example/](examples/echo/echo-example/) |
+| 🌐 Fiber集成 | Fiber框架集成 | [examples/fiber/fiber-example/](examples/fiber/fiber-example/) |
+| 🌐 Chi集成 | Chi框架集成 | [examples/chi/chi-example/](examples/chi/chi-example/) |
 | 🌐 GoFrame集成 | GoFrame框架集成 | [examples/gf/](examples/gf/) |
+| 🌐 Kratos集成 | Kratos框架集成 | [examples/kratos/kratos-example/](examples/kratos/kratos-example/) |
+| 🌐 Hertz集成 | Hertz框架集成 | [examples/hertz/herz-example/](examples/hertz/herz-example/) |
 
 ### 💾 存储方案
 
@@ -661,7 +814,7 @@ Apache License 2.0
 
 ## 📞 支持
 
-- 💬 问题反馈: [GitHub Issues](https://github.com/click33/sa-token-go/issues)
+- 💬 问题反馈: [GitHub Issues](https://github.com/sa-tokens/sa-token-go/issues)
 - 📖 文档: [docs/](docs/)
 
 ---
