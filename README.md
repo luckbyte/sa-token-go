@@ -45,7 +45,7 @@ go get github.com/sa-tokens/sa-token-go/integrations/chi@latest    # Chi framewo
 # or
 go get github.com/sa-tokens/sa-token-go/integrations/gf@latest     # GoFrame framework
 # or
-go get github.com/click33/sa-token-go/integrations/kratos@latest # Kratos framework
+go get github.com/click33/sa-token-go/integrations/kratos@latest   # Kratos framework
 # or
 go get github.com/sa-tokens/sa-token-go/integrations/hertz@latest  # Hertz framework
 ```
