@@ -73,7 +73,7 @@ type RefreshTokenManager struct {
 }
 
 // NewRefreshTokenManager Creates a new refresh token manager | 创建新的刷新令牌管理器
-// prefix: key prefix (e.g., "satoken:" or "" for Java compatibility) | 键前缀（如："satoken:" 或 "" 兼容Java）
+// prefix: Redis key namespace (e.g. "satoken:" or "" for bare keys) | 键前缀（如 "satoken:" 或空前缀）
 // cfg: configuration, uses Timeout for access token TTL | 配置，使用Timeout作为访问令牌有效期
 func NewRefreshTokenManager(storage adapter.Storage, prefix, keyPrefix string, cfg *config.Config) *RefreshTokenManager {
 	accessTTL := time.Duration(cfg.Timeout) * time.Second

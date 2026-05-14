@@ -41,8 +41,15 @@ func main() {
 
 	// 受保护路由
 	api := app.Group("/api")
+	// 先执行 TokenInterceptor，再执行 AuthMiddleware，避免业务层重复写 token 提取逻辑
+	api.Use(plugin.TokenInterceptor())
 	api.Use(plugin.AuthMiddleware())
 	{
+		api.Get("/token", func(c *fiber.Ctx) error {
+			return c.JSON(fiber.Map{
+				"tokenFromCtx": safiber.GetTokenFromCtx(c),
+			})
+		})
 		api.Get("/user/info", func(c *fiber.Ctx) error {
 			saCtx, _ := safiber.GetSaToken(c)
 			loginID, _ := saCtx.GetLoginID()

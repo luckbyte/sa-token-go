@@ -85,7 +85,7 @@ func TestStpLogic_AuthAndSessionFlow(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotNil(t, sessByToken)
 
-	tokenSess, err := logic.GetTokenSession(token)
+	tokenSess, err := logic.GetTokenSessionOrCreate(token)
 	require.NoError(t, err)
 	assert.NotNil(t, tokenSess)
 

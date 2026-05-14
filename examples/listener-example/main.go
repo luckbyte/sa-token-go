@@ -10,7 +10,8 @@ import (
 )
 
 func main() {
-	fmt.Println("=== Sa-Token-Go Event Listener Example ===\n")
+	fmt.Println("=== Sa-Token-Go Event Listener Example ===")
+	fmt.Println()
 
 	// 1. Simple function listener
 	manager := core.NewBuilder().
@@ -61,7 +62,9 @@ func main() {
 	// Initialize Sa-Token
 	stputil.SetManager(manager)
 
-	fmt.Println("\n--- Triggering Events ---\n")
+	fmt.Println()
+	fmt.Println("--- Triggering Events ---")
+	fmt.Println()
 
 	// Trigger login event
 	token1, _ := stputil.Login(1000)

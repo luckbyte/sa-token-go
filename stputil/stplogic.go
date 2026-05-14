@@ -2,12 +2,15 @@ package stputil
 
 import (
 	"fmt"
+	"sync"
+	"time"
+
+	core "github.com/click33/sa-token-go/core"
+	"github.com/click33/sa-token-go/core/adapter"
 	"github.com/click33/sa-token-go/core/manager"
 	"github.com/click33/sa-token-go/core/oauth2"
 	"github.com/click33/sa-token-go/core/security"
 	"github.com/click33/sa-token-go/core/session"
-	"sync"
-	"time"
 )
 
 var (
@@ -99,6 +102,11 @@ func (s *StpLogic) GetTokenInfo(tokenValue string) (*manager.TokenInfo, error) {
 // Kickout kicks out a user session | 踢人下线
 func (s *StpLogic) Kickout(loginID interface{}, device ...string) error {
 	return s.manager.Kickout(toString(loginID), device...)
+}
+
+// KickoutByToken kicks out by token value | 按 Token 踢下线
+func (s *StpLogic) KickoutByToken(tokenValue string) error {
+	return s.manager.KickoutByToken(tokenValue)
 }
 
 // ============ Account Disable | 账号封禁 ============
@@ -273,7 +281,7 @@ func (s *StpLogic) CheckDisable(tokenValue string) error {
 		return err
 	}
 	if s.IsDisable(loginID) {
-		return fmt.Errorf("account is disabled")
+		return core.NewAccountDisabledError(loginID)
 	}
 	return nil
 }
@@ -285,7 +293,7 @@ func (s *StpLogic) CheckPermission(tokenValue string, permission string) error {
 		return err
 	}
 	if !s.HasPermission(loginID, permission) {
-		return fmt.Errorf("permission denied: %s", permission)
+		return core.NewPermissionDeniedError(permission)
 	}
 	return nil
 }
@@ -297,7 +305,7 @@ func (s *StpLogic) CheckPermissionAnd(tokenValue string, permissions []string) e
 		return err
 	}
 	if !s.HasPermissionsAnd(loginID, permissions) {
-		return fmt.Errorf("permission denied: %v", permissions)
+		return core.NewPermissionDeniedListError(permissions)
 	}
 	return nil
 }
@@ -309,7 +317,7 @@ func (s *StpLogic) CheckPermissionOr(tokenValue string, permissions []string) er
 		return err
 	}
 	if !s.HasPermissionsOr(loginID, permissions) {
-		return fmt.Errorf("permission denied: %v", permissions)
+		return core.NewPermissionDeniedListError(permissions)
 	}
 	return nil
 }
@@ -330,7 +338,7 @@ func (s *StpLogic) CheckRole(tokenValue string, role string) error {
 		return err
 	}
 	if !s.HasRole(loginID, role) {
-		return fmt.Errorf("role denied: %s", role)
+		return core.NewRoleDeniedError(role)
 	}
 	return nil
 }
@@ -342,7 +350,7 @@ func (s *StpLogic) CheckRoleAnd(tokenValue string, roles []string) error {
 		return err
 	}
 	if !s.HasRolesAnd(loginID, roles) {
-		return fmt.Errorf("role denied: %v", roles)
+		return core.NewRoleDeniedListError(roles)
 	}
 	return nil
 }
@@ -354,7 +362,7 @@ func (s *StpLogic) CheckRoleOr(tokenValue string, roles []string) error {
 		return err
 	}
 	if !s.HasRolesOr(loginID, roles) {
-		return fmt.Errorf("role denied: %v", roles)
+		return core.NewRoleDeniedListError(roles)
 	}
 	return nil
 }
@@ -368,9 +376,139 @@ func (s *StpLogic) GetRoleList(tokenValue string) ([]string, error) {
 	return GetRoles(loginID)
 }
 
-// GetTokenSession gets session for the token | 获取Token对应的Session
+// GetTokenSession loads Token-Session (not Account-Session) | 获取 Token-Session
 func (s *StpLogic) GetTokenSession(tokenValue string) (*session.Session, error) {
-	return GetSessionByToken(tokenValue)
+	return s.manager.GetTokenSession(tokenValue, false)
+}
+
+// GetTokenSessionOrCreate loads or creates Token-Session | 获取或创建 Token-Session
+func (s *StpLogic) GetTokenSessionOrCreate(tokenValue string) (*session.Session, error) {
+	return s.manager.GetTokenSession(tokenValue, true)
+}
+
+// GetAnonTokenSession anonymous Token-Session | 匿名 Token-Session
+func (s *StpLogic) GetAnonTokenSession(currentToken string, ctx adapter.RequestContext) (*session.Session, error) {
+	return s.manager.GetAnonTokenSession(currentToken, ctx)
+}
+
+// DeleteTokenSession removes Token-Session storage | 删除 Token-Session
+func (s *StpLogic) DeleteTokenSession(tokenValue string) error {
+	return s.manager.DeleteTokenSession(tokenValue)
+}
+
+// Replaced overrun logout by loginId+device | 顶号下线
+func (s *StpLogic) Replaced(loginID interface{}, device ...string) error {
+	return s.manager.Replaced(toString(loginID), device...)
+}
+
+// ReplacedByToken overrun logout by token | 按 Token 顶号下线
+func (s *StpLogic) ReplacedByToken(tokenValue string) error {
+	return s.manager.ReplacedByToken(tokenValue)
+}
+
+// OpenSafe second-level auth | 二级认证
+func (s *StpLogic) OpenSafe(tokenValue, service string, safeTime int64) error {
+	return s.manager.OpenSafe(tokenValue, service, safeTime)
+}
+
+func (s *StpLogic) IsSafe(tokenValue, service string) bool {
+	return s.manager.IsSafe(tokenValue, service)
+}
+
+func (s *StpLogic) CheckSafe(tokenValue, service string) error {
+	return s.manager.CheckSafe(tokenValue, service)
+}
+
+func (s *StpLogic) GetSafeTime(tokenValue, service string) (int64, error) {
+	return s.manager.GetSafeTime(tokenValue, service)
+}
+
+func (s *StpLogic) CloseSafe(tokenValue, service string) error {
+	return s.manager.CloseSafe(tokenValue, service)
+}
+
+func (s *StpLogic) DisableLevel(loginID interface{}, service string, level int, duration time.Duration) error {
+	return s.manager.DisableLevel(toString(loginID), service, level, duration)
+}
+
+func (s *StpLogic) IsDisableLevel(loginID interface{}, service string, level int) bool {
+	return s.manager.IsDisableLevel(toString(loginID), service, level)
+}
+
+func (s *StpLogic) CheckDisableLevel(loginID interface{}, service string, level int) error {
+	return s.manager.CheckDisableLevel(toString(loginID), service, level)
+}
+
+func (s *StpLogic) GetDisableLevel(loginID interface{}, service string) int {
+	return s.manager.GetDisableLevel(toString(loginID), service)
+}
+
+func (s *StpLogic) UntieDisable(loginID interface{}, services ...string) error {
+	return s.manager.UntieDisableServices(toString(loginID), services...)
+}
+
+func (s *StpLogic) UpdateLastActiveToNow(tokenValue string) error {
+	return s.manager.UpdateLastActiveToNow(tokenValue)
+}
+
+func (s *StpLogic) GetTokenLastActiveTime(tokenValue string) (int64, error) {
+	return s.manager.GetTokenLastActiveTime(tokenValue)
+}
+
+func (s *StpLogic) CheckActiveTimeout(tokenValue string) error {
+	return s.manager.CheckActiveTimeout(tokenValue)
+}
+
+func (s *StpLogic) GetTokenTimeout(tokenValue string) (int64, error) {
+	return s.manager.GetTokenTimeout(tokenValue)
+}
+
+func (s *StpLogic) GetSessionTimeout(loginID interface{}) (int64, error) {
+	return s.manager.GetSessionTimeout(toString(loginID))
+}
+
+func (s *StpLogic) GetTokenSessionTimeout(tokenValue string) (int64, error) {
+	return s.manager.GetTokenSessionTimeout(tokenValue)
+}
+
+func (s *StpLogic) RenewTimeout(tokenValue string, sec int64) error {
+	return s.manager.RenewTimeout(tokenValue, sec)
+}
+
+func (s *StpLogic) SearchTokenValue(keyword string, start, size int, asc bool) ([]string, error) {
+	return s.manager.SearchTokenValue(keyword, start, size, asc)
+}
+
+func (s *StpLogic) SearchSessionID(keyword string, start, size int, asc bool) ([]string, error) {
+	return s.manager.SearchSessionID(keyword, start, size, asc)
+}
+
+func (s *StpLogic) SearchTokenSessionID(keyword string, start, size int, asc bool) ([]string, error) {
+	return s.manager.SearchTokenSessionID(keyword, start, size, asc)
+}
+
+func (s *StpLogic) GetTokenValueByLoginID(loginID interface{}, device ...string) (string, error) {
+	return s.manager.GetTokenValue(toString(loginID), device...)
+}
+
+func (s *StpLogic) GetTerminalListByLoginID(loginID interface{}, device ...string) ([]string, error) {
+	return s.manager.GetTerminalListByLoginID(toString(loginID), device...)
+}
+
+func (s *StpLogic) GetTerminalInfo(tokenValue string) (*manager.TokenInfo, error) {
+	return s.manager.GetTerminalInfo(tokenValue)
+}
+
+func (s *StpLogic) GetLoginDeviceType(tokenValue string) (string, error) {
+	return s.manager.GetLoginDeviceType(tokenValue)
+}
+
+func (s *StpLogic) GetLoginDeviceID(tokenValue string) (string, error) {
+	return s.manager.GetLoginDeviceID(tokenValue)
+}
+
+func (s *StpLogic) IsTrustDeviceID(loginID interface{}, deviceID string) bool {
+	return s.manager.IsTrustDeviceID(toString(loginID), deviceID)
 }
 
 // CloseManager Closes the manager and releases all resources | 关闭管理器并释放所有资源

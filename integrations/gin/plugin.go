@@ -20,6 +20,20 @@ func NewPlugin(manager *core.Manager) *Plugin {
 	}
 }
 
+// satokenTokenCtxKey TokenInterceptor 在 gin.Context 中存放解析后 token 的键
+const satokenTokenCtxKey = "satoken_token"
+
+// TokenInterceptor 提前从 Header/Cookie/Query 解析 token 并写入 gin.Context，不做登录校验
+// TokenInterceptor reads token from request and stores it on gin.Context; does not enforce login
+func (p *Plugin) TokenInterceptor() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		ctx := NewGinContext(c)
+		tok := core.ReadTokenFromRequest(ctx, p.manager)
+		c.Set(satokenTokenCtxKey, tok)
+		c.Next()
+	}
+}
+
 // AuthMiddleware authentication middleware | 认证中间件
 func (p *Plugin) AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -43,10 +57,9 @@ func (p *Plugin) AuthMiddleware() gin.HandlerFunc {
 func (p *Plugin) PathAuthMiddleware(config *core.PathAuthConfig) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		path := c.Request.URL.Path
-		token := c.GetHeader(p.manager.GetConfig().TokenName)
-		if token == "" {
-			token, _ = c.Cookie(p.manager.GetConfig().TokenName)
-		}
+		ctx := NewGinContext(c)
+		// Same extraction as SaTokenContext.GetTokenValue: Query(apikey), CutTokenPrefix, empty TokenName -> Authorization
+		token := core.ReadTokenFromRequest(ctx, p.manager)
 
 		result := core.ProcessAuth(path, token, config, p.manager)
 
@@ -209,6 +222,17 @@ func (p *Plugin) UserInfoHandler(c *gin.Context) {
 		"permissions": permissions,
 		"roles":       roles,
 	})
+}
+
+// GetTokenFromCtx 读取 TokenInterceptor 写入的 token（未挂载拦截器时返回空串）
+// GetTokenFromCtx returns the token stashed by TokenInterceptor
+func GetTokenFromCtx(c *gin.Context) string {
+	if v, ok := c.Get(satokenTokenCtxKey); ok {
+		if s, ok := v.(string); ok {
+			return s
+		}
+	}
+	return ""
 }
 
 // GetSaToken gets Sa-Token context from Gin context | 从Gin上下文获取Sa-Token上下文

@@ -35,45 +35,45 @@ A lightweight, high-performance Go authentication and authorization framework, i
 
 ```bash
 # Import only the framework integration (includes core + stputil automatically)
-go get github.com/click33/sa-token-go/integrations/gin@latest   # Gin framework
+go get github.com/sa-tokens/sa-token-go/integrations/gin@latest   # Gin framework
 # or
-go get github.com/click33/sa-token-go/integrations/echo@latest  # Echo framework
+go get github.com/sa-tokens/sa-token-go/integrations/echo@latest  # Echo framework
 # or
-go get github.com/click33/sa-token-go/integrations/fiber@latest # Fiber framework
+go get github.com/sa-tokens/sa-token-go/integrations/fiber@latest # Fiber framework
 # or
-go get github.com/click33/sa-token-go/integrations/chi@latest   # Chi framework
+go get github.com/sa-tokens/sa-token-go/integrations/chi@latest   # Chi framework
 # or
-go get github.com/click33/sa-token-go/integrations/gf@latest    # GoFrame framework
+go get github.com/sa-tokens/sa-token-go/integrations/gf@latest    # GoFrame framework
 # or
-go get github.com/click33/sa-token-go/integrations/kratos@latest    # Kratos framework
+go get github.com/sa-tokens/sa-token-go/integrations/kratos@latest    # Kratos framework
 # or
-go get github.com/click33/sa-token-go/integrations/hertz@latest # Hertz framework
+go get github.com/sa-tokens/sa-token-go/integrations/hertz@latest # Hertz framework
 ```
 
 # Storage module (choose one)
-go get github.com/click33/sa-token-go/storage/memory@latest # Memory storage (dev)
-go get github.com/click33/sa-token-go/storage/redis@latest  # Redis storage (prod)
+go get github.com/sa-tokens/sa-token-go/storage/memory@latest # Memory storage (dev)
+go get github.com/sa-tokens/sa-token-go/storage/redis@latest  # Redis storage (prod)
 ```
 
 #### Option 2: Separate Import
 
 ```bash
 # Core modules
-go get github.com/click33/sa-token-go/core@vlatest 
-go get github.com/click33/sa-token-go/stputil@vlatest 
+go get github.com/sa-tokens/sa-token-go/core@vlatest 
+go get github.com/sa-tokens/sa-token-go/stputil@vlatest 
 
 # Storage module (choose one)
-go get github.com/click33/sa-token-go/storage/memory@latest # Memory storage (dev)
-go get github.com/click33/sa-token-go/storage/redis@latest  # Redis storage (prod)
+go get github.com/sa-tokens/sa-token-go/storage/memory@latest # Memory storage (dev)
+go get github.com/sa-tokens/sa-token-go/storage/redis@latest  # Redis storage (prod)
 
 # Framework integration (optional)
-go get github.com/click33/sa-token-go/integrations/gin@latest   # Gin framework
-go get github.com/click33/sa-token-go/integrations/echo@latest  # Echo framework
-go get github.com/click33/sa-token-go/integrations/fiber@latest # Fiber framework
-go get github.com/click33/sa-token-go/integrations/chi@latest   # Chi framework
-go get github.com/click33/sa-token-go/integrations/gf@latest    # GoFrame framework
-go get github.com/click33/sa-token-go/integrations/kratos@latest# Kratos framework
-go get github.com/click33/sa-token-go/integrations/hertz@latest # Hertz framework
+go get github.com/sa-tokens/sa-token-go/integrations/gin@latest   # Gin framework
+go get github.com/sa-tokens/sa-token-go/integrations/echo@latest  # Echo framework
+go get github.com/sa-tokens/sa-token-go/integrations/fiber@latest # Fiber framework
+go get github.com/sa-tokens/sa-token-go/integrations/chi@latest   # Chi framework
+go get github.com/sa-tokens/sa-token-go/integrations/gf@latest    # GoFrame framework
+go get github.com/sa-tokens/sa-token-go/integrations/kratos@latest# Kratos framework
+go get github.com/sa-tokens/sa-token-go/integrations/hertz@latest # Hertz framework
 ```
 
 ### ⚡ Minimal Usage (One-line Initialization)
@@ -82,9 +82,9 @@ go get github.com/click33/sa-token-go/integrations/hertz@latest # Hertz framewor
 package main
 
 import (
-    "github.com/click33/sa-token-go/core"
-    "github.com/click33/sa-token-go/stputil"
-    "github.com/click33/sa-token-go/storage/memory"
+    "github.com/sa-tokens/sa-token-go/core"
+    "github.com/sa-tokens/sa-token-go/stputil"
+    "github.com/sa-tokens/sa-token-go/storage/memory"
 )
 
 func init() {
@@ -238,7 +238,139 @@ isDisabled := stputil.IsDisable(1000)
 remainingTime, _ := stputil.GetDisableTime(1000)
 ```
 
+### 🧩 Plan-Based Advanced Demos
+
+#### 1) Context Identity (Switch + Token-in-Context)
+
+```go
+ctx := context.Background()
+ctx = stputil.SetTokenValueToCtx(ctx, token)
+
+// Default: resolve loginId from token in context
+loginID, err := stputil.GetLoginIDFromCtx(ctx)
+
+// Switch identity for current call chain (higher priority than token parsing)
+ctx = stputil.SwitchTo(ctx, "admin-1001")
+switchedID, _ := stputil.GetLoginIDFromCtx(ctx) // -> admin-1001
+```
+
+#### 2) Safe Auth + Tiered Disable
+
+```go
+// Open second-level auth for 5 minutes
+_ = stputil.OpenSafe(token, "pay", 300)
+_ = stputil.CheckSafe(token, "pay")
+
+// Tiered disable: service=comment, level=2
+_ = stputil.DisableLevel(1000, "comment", 2, time.Hour)
+_ = stputil.CheckDisableLevel(1000, "comment", 1) // blocked when level >= 1
+```
+
+#### 3) Replaced/Kickout + Terminal Query
+
+```go
+// Replace current device token(s) according to ReplacedRange
+_ = stputil.Replaced(1000, "mobile")
+
+// Query active terminals and trusted device flags
+terminals, _ := stputil.GetTerminalListByLoginID(1000)
+isTrusted := stputil.IsTrustDeviceID(1000, "ios-device-id")
+_ = stputil.AddTrustDeviceID(1000, "ios-device-id")
+
+// Search tokens/sessions
+tokens, _ := stputil.SearchTokenValue("abc", 0, 20, true)
+_ = tokens
+```
+
 ## 🌐 Framework Integration
+
+### Unified token extraction (`plugin-token-interceptor` plan)
+
+Design and rollout are captured in [.cursor/plans/plugin-token-interceptor_8a06e5ac.plan.md](.cursor/plans/plugin-token-interceptor_8a06e5ac.plan.md). Implemented behavior:
+
+1. **`ResolveTokenName` / `ReadTokenFromRequest`** live in [`core/context/context.go`](core/context/context.go). `SaTokenContext.GetTokenValue()` calls `ReadTokenFromRequest` so all code paths share the same order and prefix handling.
+2. **`core/satoken.go`** re-exports `ResolveTokenName` and `ReadTokenFromRequest` as package-level identifiers so integrations can use `core.ReadTokenFromRequest` without importing `context` separately.
+3. **Seven integrations** (Gin, Echo, Fiber, Hertz, Chi, GoFrame, Kratos) each provide **`TokenInterceptor()`**, which reads the token once via `core.ReadTokenFromRequest`, stores it on the framework context under **`satoken_token`**, and does **not** perform login checks. Handlers retrieve it with **`GetTokenFromCtx(...)`**. **`PathAuthMiddleware`** uses the same helper instead of ad-hoc header/cookie reads (fixes missing Query/`CutTokenPrefix`/`Authorization` fallback).
+4. **Read order**: Header (including Bearer when the resolved name is `Authorization`, plus `Authorization` fallback when `TokenName` is custom) → Cookie → Query (`?tokenName=value`, api-key style). **`mgr.CutTokenPrefix`** is applied to the final raw string. Header/cookie reads respect **`IsReadHeader`** / **`IsReadCookie`**; Query is attempted when earlier steps yield nothing.
+
+The following mirrors the production helpers in `core/context/context.go` (**English comments for this excerpt**):
+
+```go
+package context
+
+import (
+	"strings"
+
+	"github.com/sa-tokens/sa-token-go/core/adapter"
+	"github.com/sa-tokens/sa-token-go/core/config"
+	"github.com/sa-tokens/sa-token-go/core/manager"
+)
+
+const bearerPrefix = "Bearer "
+const AuthHeaderName = "Authorization"
+
+// ResolveTokenName uses cfg.TokenName when non-empty; otherwise "Authorization".
+func ResolveTokenName(cfg *config.Config) string {
+	if cfg != nil && strings.TrimSpace(cfg.TokenName) != "" {
+		return cfg.TokenName
+	}
+	return AuthHeaderName
+}
+
+// extractBearerToken removes a leading case-insensitive "Bearer " prefix.
+func extractBearerToken(auth string) string {
+	auth = strings.TrimSpace(auth)
+	if auth == "" {
+		return ""
+	}
+	if len(auth) > 7 && strings.EqualFold(auth[:7], bearerPrefix) {
+		return strings.TrimSpace(auth[7:])
+	}
+	return auth
+}
+
+// ReadTokenFromRequest: Header → Cookie → Query; then CutTokenPrefix on the value.
+func ReadTokenFromRequest(ctx adapter.RequestContext, mgr *manager.Manager) string {
+	if ctx == nil || mgr == nil {
+		return ""
+	}
+	cfg := mgr.GetConfig()
+	name := ResolveTokenName(cfg)
+
+	readHeader := cfg == nil || cfg.IsReadHeader
+	readCookie := cfg == nil || cfg.IsReadCookie
+
+	if readHeader {
+		if v := strings.TrimSpace(ctx.GetHeader(name)); v != "" {
+			if strings.EqualFold(name, AuthHeaderName) {
+				if t := extractBearerToken(v); t != "" {
+					return mgr.CutTokenPrefix(t)
+				}
+			}
+			return mgr.CutTokenPrefix(v)
+		}
+		if !strings.EqualFold(name, AuthHeaderName) {
+			if auth := strings.TrimSpace(ctx.GetHeader(AuthHeaderName)); auth != "" {
+				if t := extractBearerToken(auth); t != "" {
+					return mgr.CutTokenPrefix(t)
+				}
+			}
+		}
+	}
+
+	if readCookie {
+		if v := strings.TrimSpace(ctx.GetCookie(name)); v != "" {
+			return mgr.CutTokenPrefix(v)
+		}
+	}
+
+	if v := strings.TrimSpace(ctx.GetQuery(name)); v != "" {
+		return mgr.CutTokenPrefix(v)
+	}
+
+	return ""
+}
+```
 
 ### 🌟 Gin Integration (Single Import)
 
@@ -247,8 +379,8 @@ remainingTime, _ := stputil.GetDisableTime(1000)
 ```go
 import (
     "github.com/gin-gonic/gin"
-    sagin "github.com/click33/sa-token-go/integrations/gin"  // Only this import needed!
-    "github.com/click33/sa-token-go/storage/memory"
+    sagin "github.com/sa-tokens/sa-token-go/integrations/gin"  // Only this import needed!
+    "github.com/sa-tokens/sa-token-go/storage/memory"
 )
 
 func main() {
@@ -257,7 +389,8 @@ func main() {
     config := sagin.DefaultConfig()
     manager := sagin.NewManager(storage, config)
     sagin.SetManager(manager)
-    
+    plugin := sagin.NewPlugin(manager)
+
     r := gin.Default()
     
     // Login endpoint
@@ -273,6 +406,16 @@ func main() {
     r.GET("/admin", sagin.CheckPermission("admin:*"), adminHandler)  // Permission required
     r.GET("/manager", sagin.CheckRole("manager"), managerHandler)    // Role required
     r.GET("/sensitive", sagin.CheckDisable(), sensitiveHandler)      // Check if disabled
+
+    // Recommended middleware order for protected routes:
+    // 1) TokenInterceptor: normalize token from Header/Cookie/Query
+    // 2) AuthMiddleware: validate login state
+    api := r.Group("/api")
+    api.Use(plugin.TokenInterceptor(), plugin.AuthMiddleware())
+    api.GET("/token", func(c *gin.Context) {
+        // Read parsed token directly from framework context
+        c.JSON(200, gin.H{"token": sagin.GetTokenFromCtx(c)})
+    })
     
     r.Run(":8080")
 }
@@ -293,7 +436,7 @@ func main() {
 **Usage example:**
 
 ```go
-import sagin "github.com/click33/sa-token-go/integrations/gin"
+import sagin "github.com/sa-tokens/sa-token-go/integrations/gin"
 
 func main() {
     r := gin.Default()
@@ -330,8 +473,8 @@ func main() {
 import (
     "github.com/gogf/gf/v2/frame/g"
     "github.com/gogf/gf/v2/net/ghttp"
-    sagf "github.com/click33/sa-token-go/integrations/gf"  // Only this import needed!
-    "github.com/click33/sa-token-go/storage/memory"
+    sagf "github.com/sa-tokens/sa-token-go/integrations/gf"  // Only this import needed!
+    "github.com/sa-tokens/sa-token-go/storage/memory"
 )
 
 func main() {
@@ -368,25 +511,30 @@ func main() {
 
 ```go
 // Echo
-import saecho "github.com/click33/sa-token-go/integrations/echo"
+import saecho "github.com/sa-tokens/sa-token-go/integrations/echo"
 e.GET("/user", saecho.CheckLogin(), handler)
 
 // Fiber
-import safiber "github.com/click33/sa-token-go/integrations/fiber"
+import safiber "github.com/sa-tokens/sa-token-go/integrations/fiber"
 app.Get("/user", safiber.CheckLogin(), handler)
 
 // Chi
-import sachi "github.com/click33/sa-token-go/integrations/chi"
+import sachi "github.com/sa-tokens/sa-token-go/integrations/chi"
 r.Get("/user", sachi.CheckLogin(), handler)
 
 // Kratos
-import sakratos "github.com/click33/sa-token-go/integrations/kratos"
+import sakratos "github.com/sa-tokens/sa-token-go/integrations/kratos"
 // Use Plugin.Server() as middleware
 
 // Hertz
-import sahertz "github.com/click33/sa-token-go/integrations/hertz"
+import sahertz "github.com/sa-tokens/sa-token-go/integrations/hertz"
 h.GET("/user", sahertz.CheckLogin(), handler)
 ```
+
+All integration plugins now provide:
+
+- `TokenInterceptor()` - unified token extraction (`Header -> Cookie -> Query(apikey)`), with `TokenPrefix` trimming.
+- `GetTokenFromCtx(...)` - fetch parsed token from framework context in handlers.
 
 ## 🎨 Advanced Features
 
@@ -558,7 +706,10 @@ sa-token-go/
 │   ├── gin/                # Gin integration (with annotations)
 │   ├── echo/               # Echo integration
 │   ├── fiber/              # Fiber integration
-│   └── chi/                # Chi integration
+│   ├── chi/                # Chi integration
+│   ├── gf/                 # GoFrame integration
+│   ├── kratos/             # Kratos integration
+│   └── hertz/              # Hertz integration
 │
 ├── examples/               # Example projects
 │   ├── quick-start/        # Quick start
@@ -569,7 +720,7 @@ sa-token-go/
 │   ├── jwt-example/        # JWT example
 │   ├── redis-example/      # Redis example
 │   ├── listener-example/   # Event listener example
-│   └── gin/echo/fiber/chi/ # Framework integration examples
+│   └── gin/echo/fiber/chi/gf/kratos/hertz/ # Framework integration examples
 │
 └── docs/                   # Documentation
     ├── tutorial/           # Tutorials
@@ -616,11 +767,14 @@ sa-token-go/
 | 🔑 JWT Example | JWT token usage | [examples/jwt-example/](examples/jwt-example/) |
 | 💾 Redis Example | Redis storage example | [examples/redis-example/](examples/redis-example/) |
 | 🎧 Event Listener | Event system usage | [examples/listener-example/](examples/listener-example/) |
-| 🌐 Gin Integration | Complete Gin integration | [examples/gin/](examples/gin/) |
-| 🌐 Echo Integration | Echo framework integration | [examples/echo/](examples/echo/) |
-| 🌐 Fiber Integration | Fiber framework integration | [examples/fiber/](examples/fiber/) |
-| 🌐 Chi Integration | Chi framework integration | [examples/chi/](examples/chi/) |
+| 🌐 Gin (Simple) | Minimal Gin integration | [examples/gin/gin-simple/](examples/gin/gin-simple/) |
+| 🌐 Gin (Full) | Config-driven Gin integration | [examples/gin/gin-example/](examples/gin/gin-example/) |
+| 🌐 Echo Integration | Echo framework integration | [examples/echo/echo-example/](examples/echo/echo-example/) |
+| 🌐 Fiber Integration | Fiber framework integration | [examples/fiber/fiber-example/](examples/fiber/fiber-example/) |
+| 🌐 Chi Integration | Chi framework integration | [examples/chi/chi-example/](examples/chi/chi-example/) |
 | 🌐 GoFrame Integration | GoFrame framework integration | [examples/gf/](examples/gf/) |
+| 🌐 Kratos Integration | Kratos framework integration | [examples/kratos/kratos-example/](examples/kratos/kratos-example/) |
+| 🌐 Hertz Integration | Hertz framework integration | [examples/hertz/herz-example/](examples/hertz/herz-example/) |
 
 ### 💾 Storage Options
 
@@ -650,7 +804,7 @@ Special thanks to the following contributors for their valuable contributions:
 ## 📞 Support
 
 - 📧 Email: <support@sa-token-go.dev>
-- 💬 Issues: [GitHub Issues](https://github.com/click33/sa-token-go/issues)
+- 💬 Issues: [GitHub Issues](https://github.com/sa-tokens/sa-token-go/issues)
 - 📖 Documentation: [docs/](docs/)
 
 ---

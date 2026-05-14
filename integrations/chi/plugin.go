@@ -1,6 +1,7 @@
 package chi
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -17,6 +18,20 @@ type Plugin struct {
 func NewPlugin(manager *core.Manager) *Plugin {
 	return &Plugin{
 		manager: manager,
+	}
+}
+
+const satokenTokenCtxKey = "satoken_token"
+
+// TokenInterceptor 解析 token 并注入标准 context，供后续 Handler 与 GetTokenFromCtx 使用
+func (p *Plugin) TokenInterceptor() func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			ctx := NewChiContext(w, r)
+			tok := core.ReadTokenFromRequest(ctx, p.manager)
+			r = r.WithContext(context.WithValue(r.Context(), satokenTokenCtxKey, tok))
+			next.ServeHTTP(w, r)
+		})
 	}
 }
 
@@ -44,13 +59,8 @@ func (p *Plugin) PathAuthMiddleware(config *core.PathAuthConfig) func(http.Handl
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			path := r.URL.Path
-			token := r.Header.Get(p.manager.GetConfig().TokenName)
-			if token == "" {
-				cookie, _ := r.Cookie(p.manager.GetConfig().TokenName)
-				if cookie != nil {
-					token = cookie.Value
-				}
-			}
+			ctx := NewChiContext(w, r)
+			token := core.ReadTokenFromRequest(ctx, p.manager)
 
 			result := core.ProcessAuth(path, token, config, p.manager)
 
@@ -144,6 +154,19 @@ func (p *Plugin) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	writeSuccessResponse(w, map[string]interface{}{
 		"token": token,
 	})
+}
+
+// GetTokenFromCtx 从请求 context 读取 TokenInterceptor 注入的 token
+func GetTokenFromCtx(r *http.Request) string {
+	if r == nil {
+		return ""
+	}
+	if v := r.Context().Value(satokenTokenCtxKey); v != nil {
+		if s, ok := v.(string); ok {
+			return s
+		}
+	}
+	return ""
 }
 
 // GetSaToken 从请求上下文获取Sa-Token上下文

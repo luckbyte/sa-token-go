@@ -43,7 +43,15 @@ func main() {
 
 	// 受保护路由
 	r.Group(func(r chi.Router) {
+		// 推荐中间件顺序：先提取 token，再鉴权
+		r.Use(plugin.TokenInterceptor())
 		r.Use(plugin.AuthMiddleware())
+		r.Get("/api/token", func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"tokenFromCtx": sachi.GetTokenFromCtx(r),
+			})
+		})
 		r.Get("/api/user/info", func(w http.ResponseWriter, r *http.Request) {
 			saCtx, _ := sachi.GetSaToken(r)
 			loginID, _ := saCtx.GetLoginID()

@@ -23,6 +23,17 @@ func NewPlugin(manager *core.Manager) *Plugin {
 	}
 }
 
+const satokenTokenCtxKey = "satoken_token"
+
+// TokenInterceptor 将解析到的 token 写入 RequestContext，不做登录校验
+func (p *Plugin) TokenInterceptor() app.HandlerFunc {
+	return func(ctx context.Context, c *app.RequestContext) {
+		tok := core.ReadTokenFromRequest(NewHertzContext(c), p.manager)
+		c.Set(satokenTokenCtxKey, tok)
+		c.Next(ctx)
+	}
+}
+
 // AuthMiddleware authentication middleware | 认证中间件
 func (p *Plugin) AuthMiddleware() app.HandlerFunc {
 	return func(ctx context.Context, c *app.RequestContext) {
@@ -46,10 +57,8 @@ func (p *Plugin) AuthMiddleware() app.HandlerFunc {
 func (p *Plugin) PathAuthMiddleware(config *core.PathAuthConfig) app.HandlerFunc {
 	return func(ctx context.Context, c *app.RequestContext) {
 		path := string(c.Path())
-		token := string(c.GetHeader(p.manager.GetConfig().TokenName))
-		if token == "" {
-			token = string(c.Cookie(p.manager.GetConfig().TokenName))
-		}
+		hCtx := NewHertzContext(c)
+		token := core.ReadTokenFromRequest(hCtx, p.manager)
 
 		result := core.ProcessAuth(path, token, config, p.manager)
 
@@ -219,6 +228,16 @@ func (p *Plugin) UserInfoHandler(c *app.RequestContext) {
 		"permissions": permissions,
 		"roles":       roles,
 	})
+}
+
+// GetTokenFromCtx 读取 TokenInterceptor 写入的 token
+func GetTokenFromCtx(c *app.RequestContext) string {
+	if v, ok := c.Get(satokenTokenCtxKey); ok {
+		if s, ok := v.(string); ok {
+			return s
+		}
+	}
+	return ""
 }
 
 // GetSaToken gets Sa-Token context from Hertz context | 从Hertz上下文获取Sa-Token上下文

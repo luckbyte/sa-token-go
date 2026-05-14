@@ -24,6 +24,25 @@ func init() {
 }
 ```
 
+## 新增能力（计划更新）
+
+以下能力已在近期计划中补齐并推荐优先使用：
+
+- 上下文身份解析：
+  - `SetTokenValueToCtx`
+  - `GetTokenValueFromCtx`
+  - `GetLoginIDFromCtx`
+  - `SwitchTo` / `SwitchToFunc` / `GetSwitchLoginID`
+- 二级认证（Safe）：
+  - `OpenSafe` / `CheckSafe` / `IsSafe` / `CloseSafe` / `GetSafeTime`
+- 分级封禁：
+  - `DisableLevel` / `GetDisableLevel` / `CheckDisableLevel` / `UntieDisableServices`
+- 顶号下线、终端与检索：
+  - `Replaced` / `ReplacedByToken`
+  - `GetTerminalListByLoginID` / `GetTerminalInfo`
+  - `IsTrustDeviceID` / `AddTrustDeviceID`
+  - `SearchTokenValue` / `SearchSessionID` / `SearchTokenSessionID`
+
 ## 登录认证 API
 
 ### Login
@@ -132,6 +151,90 @@ func Kickout(loginID interface{}, device ...string) error
 ```go
 stputil.Kickout(1000)
 stputil.Kickout(1000, "mobile")
+```
+
+### Replaced（顶号下线）
+
+将 token 标记为被顶号下线（对应并发溢出场景）。
+
+**签名**：
+```go
+func Replaced(loginID interface{}, device ...string) error
+func ReplacedByToken(tokenValue string) error
+```
+
+**示例**：
+```go
+_ = stputil.Replaced(1000, "mobile")
+_ = stputil.ReplacedByToken(token)
+```
+
+## 上下文身份 API
+
+### SetTokenValueToCtx / GetLoginIDFromCtx
+
+先把 token 写入 `context.Context`，再基于上下文解析 loginID（优先使用 `SwitchTo` 身份）。
+
+**签名**：
+```go
+func SetTokenValueToCtx(parent context.Context, token string) context.Context
+func GetTokenValueFromCtx(ctx context.Context) string
+func GetLoginIDFromCtx(ctx context.Context) (string, error)
+```
+
+**示例**：
+```go
+ctx := context.Background()
+ctx = stputil.SetTokenValueToCtx(ctx, token)
+loginID, err := stputil.GetLoginIDFromCtx(ctx)
+```
+
+### SwitchTo
+
+临时切换上下文身份。
+
+**签名**：
+```go
+func SwitchTo(parent context.Context, loginID interface{}) context.Context
+func SwitchToFunc(parent context.Context, loginID interface{}, fn func(ctx context.Context) error) error
+func GetSwitchLoginID(ctx context.Context) string
+func IsSwitch(ctx context.Context) bool
+```
+
+## 二级认证 API
+
+**签名**：
+```go
+func OpenSafe(tokenValue, service string, safeTime int64) error
+func IsSafe(tokenValue, service string) bool
+func CheckSafe(tokenValue, service string) error
+func CloseSafe(tokenValue, service string) error
+func GetSafeTime(tokenValue, service string) (int64, error)
+```
+
+## 分级封禁 API
+
+**签名**：
+```go
+func DisableLevel(loginID interface{}, service string, level int, duration time.Duration) error
+func GetDisableLevel(loginID interface{}, service string) int
+func IsDisableLevel(loginID interface{}, service string, level int) bool
+func CheckDisableLevel(loginID interface{}, service string, level int) error
+func UntieDisableServices(loginID interface{}, services ...string) error
+```
+
+## 终端与检索 API
+
+**签名**：
+```go
+func GetTerminalListByLoginID(loginID interface{}, device ...string) ([]string, error)
+func GetTerminalInfo(tokenValue string) (*manager.TokenInfo, error)
+func IsTrustDeviceID(loginID interface{}, deviceID string) bool
+func AddTrustDeviceID(loginID interface{}, deviceID string) error
+
+func SearchTokenValue(keyword string, start, size int, asc bool) ([]string, error)
+func SearchSessionID(keyword string, start, size int, asc bool) ([]string, error)
+func SearchTokenSessionID(keyword string, start, size int, asc bool) ([]string, error)
 ```
 
 ## 权限验证 API

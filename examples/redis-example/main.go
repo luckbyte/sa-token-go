@@ -39,12 +39,12 @@ func main() {
 
 	// Initialize Sa-Token with Redis storage | 使用 Redis 存储初始化 Sa-Token
 	redisURL := fmt.Sprintf("redis://:%s@%s/0", redisPassword, redisAddr)
-	redisStorage, err := redis.NewStorage(redisURL) // Storage 层不处理前缀，符合 Java sa-token 设计
+	redisStorage, err := redis.NewStorage(redisURL) // Storage 不负责业务级 KeyPrefix，由 Manager 拼键
 	if err != nil {
 		log.Fatalf("❌ Failed to create Redis storage: %v\n", err)
 	}
 
-	// 创建 Manager（符合 Java sa-token 标准设计）
+	// 创建 Manager
 	stputil.SetManager(
 		core.NewBuilder().
 			Storage(redisStorage).
@@ -56,11 +56,11 @@ func main() {
 			Build(),
 	)
 
-	fmt.Println("📌 当前配置（符合 Java sa-token 标准）:")
+	fmt.Println("📌 当前配置：")
 	fmt.Println("   - Storage 层前缀: \"\" (空)")
 	fmt.Println("   - Manager 层前缀: \"satoken\" → 自动变为 \"satoken:\"")
 	fmt.Println("   - Redis Key 示例: satoken:login:token:xxx")
-	fmt.Println("   - ✅ 完全兼容 Java sa-token")
+	fmt.Println("   - ✅ 与异构服务共 Redis 时请对齐 KeyPrefix、TokenName")
 	fmt.Println()
 
 	// Test authentication | 测试认证功能

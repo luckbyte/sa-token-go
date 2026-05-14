@@ -259,7 +259,7 @@ func (b *Builder) RenewPoolConfig(cfg *pool.RenewPoolConfig) *Builder {
 // KeyPrefix sets storage key prefix | 设置存储键前缀
 // Automatically adds ":" suffix if not present (except for empty string) | 自动添加 ":" 后缀（空字符串除外）
 // Examples: "satoken" -> "satoken:", "myapp" -> "myapp:", "" -> ""
-// Use empty string "" for Java sa-token compatibility | 使用空字符串 "" 兼容 Java sa-token
+// Use empty string "" to omit key namespace prefix | 空字符串表示 Redis 键不加约定前缀
 func (b *Builder) KeyPrefix(prefix string) *Builder {
 	// 如果前缀不为空且不以 : 结尾，自动添加 :
 	if prefix != "" && !strings.HasSuffix(prefix, ":") {

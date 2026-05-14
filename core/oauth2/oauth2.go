@@ -110,7 +110,7 @@ type OAuth2Server struct {
 }
 
 // NewOAuth2Server Creates a new OAuth2 server | 创建新的OAuth2服务器
-// prefix: key prefix (e.g., "satoken:" or "" for Java compatibility) | 键前缀（如："satoken:" 或 "" 兼容Java）
+// prefix: Redis key namespace (e.g. "satoken:" or "" for bare keys) | 键前缀（如 "satoken:" 或空前缀）
 func NewOAuth2Server(storage adapter.Storage, prefix string) *OAuth2Server {
 	return &OAuth2Server{
 		storage:         storage,
@@ -388,4 +388,19 @@ func (s *OAuth2Server) getTokenKey(token string) string {
 // getRefreshKey Gets storage key for refresh token | 获取刷新令牌的存储键
 func (s *OAuth2Server) getRefreshKey(refreshToken string) string {
 	return s.keyPrefix + RefreshKeySuffix + refreshToken
+}
+
+// IssueAccessToken implements granttype.ServerLike | 颁发 access_token（ServerLike）
+func (s *OAuth2Server) IssueAccessToken(userID, clientID string, scopes []string) (any, error) {
+	return s.generateAccessToken(userID, clientID, scopes)
+}
+
+// IssueRefreshToken implements granttype.ServerLike | 刷新令牌（ServerLike）
+func (s *OAuth2Server) IssueRefreshToken(refreshToken, clientID, clientSecret string) (any, error) {
+	return s.RefreshAccessToken(refreshToken, clientID, clientSecret)
+}
+
+// ConsumeAuthorizationCode implements granttype.ServerLike | 消费授权码换 token（ServerLike）
+func (s *OAuth2Server) ConsumeAuthorizationCode(code, clientID, clientSecret, redirectURI string) (any, error) {
+	return s.ExchangeCodeForToken(code, clientID, clientSecret, redirectURI)
 }

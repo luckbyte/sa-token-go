@@ -20,6 +20,20 @@ func NewPlugin(manager *core.Manager) *Plugin {
 	}
 }
 
+const satokenTokenCtxKey = "satoken_token"
+
+// TokenInterceptor 解析 token 写入 echo.Context，不做登录校验
+// TokenInterceptor stores parsed token on echo.Context without login check
+func (p *Plugin) TokenInterceptor() echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			tok := core.ReadTokenFromRequest(NewEchoContext(c), p.manager)
+			c.Set(satokenTokenCtxKey, tok)
+			return next(c)
+		}
+	}
+}
+
 // AuthMiddleware authentication middleware | 认证中间件
 func (p *Plugin) AuthMiddleware() echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
@@ -42,13 +56,8 @@ func (p *Plugin) PathAuthMiddleware(config *core.PathAuthConfig) echo.Middleware
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			path := c.Request().URL.Path
-			token := c.Request().Header.Get(p.manager.GetConfig().TokenName)
-			if token == "" {
-				cookie, _ := c.Cookie(p.manager.GetConfig().TokenName)
-				if cookie != nil {
-					token = cookie.Value
-				}
-			}
+			ctx := NewEchoContext(c)
+			token := core.ReadTokenFromRequest(ctx, p.manager)
 
 			result := core.ProcessAuth(path, token, config, p.manager)
 
@@ -135,6 +144,16 @@ func (p *Plugin) LoginHandler(c echo.Context) error {
 	return writeSuccessResponse(c, map[string]interface{}{
 		"token": token,
 	})
+}
+
+// GetTokenFromCtx 获取 TokenInterceptor 写入的 token
+func GetTokenFromCtx(c echo.Context) string {
+	if v := c.Get(satokenTokenCtxKey); v != nil {
+		if s, ok := v.(string); ok {
+			return s
+		}
+	}
+	return ""
 }
 
 // GetSaToken 从Echo上下文获取Sa-Token上下文

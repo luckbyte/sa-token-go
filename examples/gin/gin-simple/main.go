@@ -94,11 +94,13 @@ func main() {
 
 	// 受保护的路由组 | Protected route group
 	protected := r.Group("/api")
-	protected.Use(plugin.AuthMiddleware())
+	// 先提取 token，再做鉴权，示例展示 TokenInterceptor 的标准接法
+	protected.Use(plugin.TokenInterceptor(), plugin.AuthMiddleware())
 	{
 		// 用户信息 | User info
 		protected.GET("/user", func(c *gin.Context) {
-			token := c.GetHeader("token")
+			// 从 TokenInterceptor 读取解析后的 token，避免业务自行拼接读取逻辑
+			token := sagin.GetTokenFromCtx(c)
 			loginID, _ := sagin.GetLoginID(token)
 
 			c.JSON(200, gin.H{

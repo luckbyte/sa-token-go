@@ -21,13 +21,15 @@ func setupTestRouter() *ginfw.Engine {
 	// 创建内存存储
 	storage := memory.NewStorage()
 
-	// 创建配置
+	// 创建配置（显式打开从 Header 读 token，与 DefaultConfig 一致；否则零值为 false 会导致无法读 Authorization）
 	cfg := &config.Config{
 		TokenName:     "satoken",
 		Timeout:       2592000, // 30 天（秒）
 		IsConcurrent:  true,
 		IsShare:       true,
 		MaxLoginCount: -1,
+		IsReadHeader:  true,
+		IsReadCookie:  false,
 	}
 
 	// 创建并设置全局 Manager
@@ -100,7 +102,7 @@ func TestCheckRole_WithInvalidRole(t *testing.T) {
 
 	// 断言
 	assert.Equal(t, http.StatusForbidden, w.Code)
-	assert.Contains(t, w.Body.String(), "角色不足")
+	assert.Contains(t, w.Body.String(), "role denied")
 }
 
 // TestCheckRole_MultipleRoles 测试多个角色的情况（OR 逻辑）
@@ -137,7 +139,7 @@ func TestCheckRole_NoToken(t *testing.T) {
 	router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusUnauthorized, w.Code)
-	assert.Contains(t, w.Body.String(), "未登录")
+	assert.Contains(t, w.Body.String(), "not logged")
 }
 
 // TestCheckRole_InvalidToken 测试无效 token 的情况
@@ -154,7 +156,7 @@ func TestCheckRole_InvalidToken(t *testing.T) {
 	router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusUnauthorized, w.Code)
-	assert.Contains(t, w.Body.String(), "未登录")
+	assert.Contains(t, w.Body.String(), "not logged")
 }
 
 // TestCheckPermission_WithValidPermission 测试具有有效权限的用户访问
@@ -192,7 +194,7 @@ func TestCheckPermission_WithInvalidPermission(t *testing.T) {
 	router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusForbidden, w.Code)
-	assert.Contains(t, w.Body.String(), "权限不足")
+	assert.Contains(t, w.Body.String(), "permission denied")
 }
 
 // TestCheckLogin_Success 测试登录检查成功
@@ -227,7 +229,7 @@ func TestCheckLogin_Failed(t *testing.T) {
 	router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusUnauthorized, w.Code)
-	assert.Contains(t, w.Body.String(), "未登录")
+	assert.Contains(t, w.Body.String(), "not logged")
 }
 
 // TestCheckDisable_NotDisabled 测试账号未被封禁的情况
@@ -268,8 +270,9 @@ func TestCheckDisable_IsDisabled(t *testing.T) {
 	req.Header.Set("Authorization", token)
 	router.ServeHTTP(w, req)
 
-	assert.Equal(t, http.StatusForbidden, w.Code)
-	assert.Contains(t, w.Body.String(), "账号已被封禁")
+	// Disable 会踢掉所有会话，旧 token 立即失效，中间件先命中「未登录」而非封禁文案
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+	assert.Contains(t, w.Body.String(), "not logged")
 }
 
 // TestIgnore_SkipsAuthentication 测试忽略认证装饰器
@@ -333,7 +336,7 @@ func TestChainedMiddleware_CheckRoleAndHandler_NoRole(t *testing.T) {
 	router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusForbidden, w.Code)
-	assert.Contains(t, w.Body.String(), "角色不足")
+	assert.Contains(t, w.Body.String(), "role denied")
 }
 
 // TestGetHandler_WithNilHandler 测试 GetHandler 在 handler 为 nil 时的行为

@@ -2,10 +2,11 @@ package manager
 
 import (
 	"encoding/json"
-	"fmt"
+	"sort"
 	"strings"
 	"time"
 
+	"github.com/click33/sa-token-go/core/errs"
 	"github.com/click33/sa-token-go/core/pool"
 
 	"github.com/click33/sa-token-go/core/adapter"
@@ -51,15 +52,15 @@ const (
 	TokenStateReplaced TokenState = "BE_REPLACED"
 )
 
-// Error variables | 错误变量
+// Error variables alias errs (same pointers as core re-exports) | 错误变量别名
 var (
-	ErrAccountDisabled    = fmt.Errorf("account is disabled")
-	ErrNotLogin           = fmt.Errorf("not login")
-	ErrTokenNotFound      = fmt.Errorf("token not found")
-	ErrInvalidTokenData   = fmt.Errorf("invalid token data")
-	ErrLoginLimitExceeded = fmt.Errorf("login count exceeds the maximum limit")
-	ErrTokenKickout       = fmt.Errorf("token has been kicked out")
-	ErrTokenReplaced      = fmt.Errorf("token has been replaced")
+	ErrAccountDisabled    = errs.ErrAccountDisabled
+	ErrNotLogin           = errs.ErrNotLogin
+	ErrTokenNotFound      = errs.ErrTokenNotFound
+	ErrInvalidTokenData   = errs.ErrInvalidTokenData
+	ErrLoginLimitExceeded = errs.ErrMaxLoginCount
+	ErrTokenKickout       = errs.ErrKickedOut
+	ErrTokenReplaced      = errs.ErrTokenReplaced
 )
 
 // TokenInfo Token information | Token信息
@@ -188,25 +189,33 @@ func (m *Manager) Login(loginID string, device ...string) (string, error) {
 		_ = m.kickout(loginID, deviceType)
 
 	} else if m.config.MaxLoginCount > 0 && !m.config.IsShare {
-		// MaxLoginCount = 0 → 不允许任何 Token
-		if m.config.MaxLoginCount == 0 {
-			return "", ErrLoginLimitExceeded
-		}
-
 		// Concurrent login allowed but limited by MaxLoginCount | 允许并发登录但受 MaxLoginCount 限制
-		// This limit applies to all tokens of this account across devices | 该限制针对账号所有设备的登录 Token 数量
 		tokens, _ := m.GetTokenValueListByLoginID(loginID)
 		if len(tokens) >= m.config.MaxLoginCount {
-			// Reached maximum concurrent login count | 已达到最大并发登录数
-			// You may change to "kick out earliest token" if desired | 如需也可改为“踢掉最早 Token”
-			return "", ErrLoginLimitExceeded
+			mode := strings.ToUpper(strings.TrimSpace(m.config.OverflowLogoutMode))
+			victim := m.pickOverflowVictimToken(tokens)
+			if victim == "" {
+				return "", ErrLoginLimitExceeded
+			}
+			switch mode {
+			case "KICKOUT":
+				_ = m.kickoutByToken(victim)
+			case "REPLACED":
+				_ = m.removeTokenChain(victim, false, listener.EventReplaced)
+			default: // LOGOUT 或未识别配置
+				_ = m.removeTokenChain(victim, false, listener.EventLogout)
+			}
+			tokens, _ = m.GetTokenValueListByLoginID(loginID)
+			if len(tokens) >= m.config.MaxLoginCount {
+				return "", ErrLoginLimitExceeded
+			}
 		}
 	}
 
 	// Generate token | 生成Token
 	tokenValue, err := m.generator.Generate(loginID, deviceType)
 	if err != nil {
-		return "", fmt.Errorf("failed to generate token: %w", err)
+		return "", errs.ErrInvalidTokenDataWrap(err)
 	}
 
 	nowTime := time.Now().Unix()
@@ -220,18 +229,18 @@ func (m *Manager) Login(loginID string, device ...string) (string, error) {
 		ActiveTime: nowTime,
 	})
 	if err != nil {
-		return "", fmt.Errorf("failed to marshal tokenInfo: %w", err)
+		return "", errs.ErrMarshalTokenInfo(err)
 	}
 
 	// Save token-tokenInfo mapping | 保存 TokenKey-TokenInfo 映射
 	tokenKey := m.getTokenKey(tokenValue)
 	if err = m.storage.Set(tokenKey, string(tokenInfoStr), expiration); err != nil {
-		return "", fmt.Errorf("failed to save token: %w", err)
+		return "", errs.ErrStorageWrap(err)
 	}
 
 	// Save account-token mapping | 保存 AccountKey-Token 映射
 	if err = m.storage.Set(accountKey, tokenValue, expiration); err != nil {
-		return "", fmt.Errorf("failed to save account mapping: %w", err)
+		return "", errs.ErrStorageWrap(err)
 	}
 
 	// Create session | 创建Session
@@ -246,7 +255,13 @@ func (m *Manager) Login(loginID string, device ...string) (string, error) {
 			expiration,
 		)
 	if err != nil {
-		return "", fmt.Errorf("failed to save session: %w", err)
+		return "", errs.ErrStorageWrap(err)
+	}
+
+	if m.config.RightNowCreateTokenSession {
+		if _, err := m.GetTokenSession(tokenValue, true); err != nil {
+			return "", err
+		}
 	}
 
 	// Trigger login event | 触发登录事件
@@ -360,6 +375,40 @@ func (m *Manager) KickoutByToken(tokenValue string) error {
 	return m.kickoutByToken(tokenValue)
 }
 
+// Replaced performs overrun logout for loginID+device (BE_REPLACED) | 顶号下线
+func (m *Manager) Replaced(loginID string, device ...string) error {
+	rng := strings.ToUpper(strings.TrimSpace(m.config.ReplacedRange))
+	if rng == "ALL_DEVICE" {
+		tokens, err := m.GetTokenValueListByLoginID(loginID)
+		if err != nil {
+			return err
+		}
+		for _, tk := range tokens {
+			_ = m.removeTokenChain(tk, false, listener.EventReplaced)
+		}
+		return nil
+	}
+	deviceType := getDevice(device)
+	accountKey := m.getAccountKey(loginID, deviceType)
+	v, err := m.storage.Get(accountKey)
+	if err != nil || v == nil {
+		return nil
+	}
+	tokenStr, ok := assertString(v)
+	if !ok {
+		return nil
+	}
+	return m.removeTokenChain(tokenStr, false, listener.EventReplaced)
+}
+
+// ReplacedByToken marks a single token as replaced | 按 Token 顶号下线
+func (m *Manager) ReplacedByToken(tokenValue string) error {
+	if tokenValue == "" {
+		return nil
+	}
+	return m.removeTokenChain(tokenValue, false, listener.EventReplaced)
+}
+
 // ============ Token Validation | Token验证 ============
 
 // IsLogin Checks if user is logged in | 检查是否登录
@@ -372,7 +421,6 @@ func (m *Manager) IsLogin(tokenValue string) bool {
 	}
 
 	// Async auto-renew for better performance | 异步自动续期（提高性能）
-	// Note: ActiveTimeout feature removed to comply with Java sa-token design
 	if m.config.AutoRenew && m.config.Timeout > 0 {
 		tokenKey := m.getTokenKey(tokenValue)
 		if ttl, err := m.storage.TTL(tokenKey); err == nil {
@@ -416,7 +464,6 @@ func (m *Manager) CheckLoginWithState(tokenValue string) (bool, error) {
 	}
 
 	// Async auto-renew for better performance | 异步自动续期（提高性能）
-	// Note: ActiveTimeout feature removed to comply with Java sa-token design
 	if m.config.AutoRenew && m.config.Timeout > 0 {
 		if ttl, err := m.storage.TTL(m.getTokenKey(tokenValue)); err == nil {
 			ttlSeconds := int64(ttl.Seconds())
@@ -474,12 +521,12 @@ func (m *Manager) GetTokenValue(loginID string, device ...string) (string, error
 
 	tokenValue, err := m.storage.Get(accountKey)
 	if err != nil || tokenValue == nil {
-		return "", fmt.Errorf("token not found for login id: %s", loginID)
+		return "", errs.ErrTokenNotFoundForLogin(loginID)
 	}
 
 	tokenStr, ok := assertString(tokenValue)
 	if !ok {
-		return "", fmt.Errorf("invalid token value type")
+		return "", errs.ErrInvalidStorageValueType(accountKey)
 	}
 
 	return tokenStr, nil
@@ -516,8 +563,14 @@ func (m *Manager) Untie(loginID string) error {
 
 // IsDisable Checks if account is disabled | 检查账号是否被封禁
 func (m *Manager) IsDisable(loginID string) bool {
-	key := m.getDisableKey(loginID)
-	return m.storage.Exists(key)
+	if m.storage.Exists(m.getDisableKey(loginID)) {
+		return true
+	}
+	if m.GetDisableLevel(loginID, DefaultDisableService) != NotDisableLevel {
+		return true
+	}
+	level, _ := globalStpInterface.IsDisabled(loginID, DefaultDisableService)
+	return level != NotDisableLevel && level >= MinDisableLevel
 }
 
 // GetDisableTime Gets remaining disable time in seconds | 获取账号剩余封禁时间（秒）
@@ -590,20 +643,26 @@ func (m *Manager) GetPermissions(loginID string) ([]string, error) {
 	return m.toStringSlice(perms), nil
 }
 
+func matchAny(perms []string, permission string, match func(string, string) bool) bool {
+	for _, p := range perms {
+		if match(p, permission) {
+			return true
+		}
+	}
+	return false
+}
+
 // HasPermission 检查是否有指定权限
 func (m *Manager) HasPermission(loginID string, permission string) bool {
 	perms, err := m.GetPermissions(loginID)
 	if err != nil {
 		return false
 	}
-
-	for _, p := range perms {
-		if m.matchPermission(p, permission) {
-			return true
-		}
+	if matchAny(perms, permission, m.matchPermission) {
+		return true
 	}
-
-	return false
+	dynamic := globalStpInterface.GetPermissionList(loginID, m.config.EffectiveLoginType())
+	return matchAny(dynamic, permission, m.matchPermission)
 }
 
 // HasPermissionsAnd 检查是否拥有所有权限（AND）
@@ -696,6 +755,11 @@ func (m *Manager) HasRole(loginID string, role string) bool {
 			return true
 		}
 	}
+	for _, r := range globalStpInterface.GetRoleList(loginID, m.config.EffectiveLoginType()) {
+		if r == role {
+			return true
+		}
+	}
 	return false
 }
 
@@ -723,15 +787,14 @@ func (m *Manager) HasRolesOr(loginID string, roles []string) bool {
 
 // SetTokenTag Sets token tag | 设置Token标签
 func (m *Manager) SetTokenTag(tokenValue, tag string) error {
-	// Tag feature not supported to comply with Java sa-token design
-	// If you need custom metadata, use Session instead
-	return fmt.Errorf("token tag feature not supported (use Session for custom metadata)")
+	// Token tag API not implemented; use Session for custom metadata.
+	return errs.ErrFeatureNotSupportedNamed("token-tag")
 }
 
 // GetTokenTag Gets token tag | 获取Token标签
 func (m *Manager) GetTokenTag(tokenValue string) (string, error) {
-	// Tag feature not supported to comply with Java sa-token design
-	return "", fmt.Errorf("token tag feature not supported (use Session for custom metadata)")
+	// Token tag API not implemented.
+	return "", errs.ErrFeatureNotSupportedNamed("token-tag")
 }
 
 // ============ Session Query | 会话查询 ============
@@ -755,6 +818,33 @@ func (m *Manager) GetTokenValueListByLoginID(loginID string) ([]string, error) {
 	}
 
 	return tokens, nil
+}
+
+// pickOverflowVictimToken chooses one token to free a slot (oldest CreateTime first) | 溢出时选择要下线的 Token
+func (m *Manager) pickOverflowVictimToken(tokens []string) string {
+	if len(tokens) == 0 {
+		return ""
+	}
+	type cand struct {
+		tv string
+		ct int64
+	}
+	list := make([]cand, 0, len(tokens))
+	for _, tv := range tokens {
+		info, err := m.getTokenInfo(tv, false)
+		if err != nil || info == nil {
+			list = append(list, cand{tv, 0})
+			continue
+		}
+		list = append(list, cand{tv, info.CreateTime})
+	}
+	sort.Slice(list, func(i, j int) bool {
+		if list[i].ct != list[j].ct {
+			return list[i].ct < list[j].ct
+		}
+		return list[i].tv < list[j].tv
+	})
+	return list[0].tv
 }
 
 // GetSessionCountByLoginID Gets session count for specified account | 获取指定账号的Session数量
@@ -783,7 +873,7 @@ func (m *Manager) getRenewKey(tokenValue string) string {
 	return m.prefix + RenewKeyPrefix + tokenValue
 }
 
-// getLoginIDByToken Gets loginID by token (符合 Java sa-token 设计) | 通过 Token 获取 loginID
+// getLoginIDByToken Gets loginID by token | 通过 Token 获取 loginID
 func (m *Manager) getLoginIDByToken(tokenValue string) (string, error) {
 	info, err := m.getTokenInfo(tokenValue)
 	if err != nil {
@@ -815,16 +905,16 @@ func (m *Manager) getTokenInfo(tokenValue string, checkState ...bool) (*TokenInf
 	if len(checkState) == 0 || checkState[0] {
 		switch str {
 		case string(TokenStateKickout):
-			return nil, ErrTokenKickout // 被踢下线
+			return nil, errs.ErrKickedOutWithToken(tokenValue) // 被踢下线 | kicked out
 		case string(TokenStateReplaced):
-			return nil, ErrTokenReplaced // 被顶号下线
+			return nil, errs.ErrTokenReplacedWithToken(tokenValue) // 被顶号下线 | replaced
 		}
 	}
 
 	// Parse TokenInfo from JSON | 从JSON解析Token信息
 	var info TokenInfo
 	if err := json.Unmarshal([]byte(str), &info); err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrInvalidTokenData, err)
+		return nil, errs.ErrInvalidTokenDataWrap(err)
 	}
 
 	return &info, nil
@@ -898,6 +988,9 @@ func (m *Manager) removeTokenChain(tokenValue string, destroySession bool, event
 
 	// EventLogout User logout | 用户主动登出
 	case listener.EventLogout:
+		if !m.config.IsLogoutKeepTokenSession {
+			_ = m.DeleteTokenSession(tokenValue)
+		}
 		_ = m.storage.Delete(tokenKey)   // Delete token-info mapping | 删除Token信息映射
 		_ = m.storage.Delete(accountKey) // Delete account-token mapping | 删除账号映射
 		_ = m.storage.Delete(renewKey)   // Delete renew key | 删除续期标记
@@ -910,6 +1003,14 @@ func (m *Manager) removeTokenChain(tokenValue string, destroySession bool, event
 		_ = m.storage.SetKeepTTL(tokenKey, string(TokenStateKickout)) // Mark token as kicked out (preserve original TTL for cleanup) | 将Token标记为“被踢下线”（保留原TTL以便自动清理）
 		_ = m.storage.Delete(accountKey)                              // Delete account mapping | 删除账号映射
 		_ = m.storage.Delete(renewKey)                                // Delete renew key | 删除续期标记
+		_ = m.DeleteTokenSession(tokenValue)
+
+	// EventReplaced overrun logout (keep session) | 顶号下线（保留 Session）
+	case listener.EventReplaced:
+		_ = m.storage.SetKeepTTL(tokenKey, string(TokenStateReplaced))
+		_ = m.storage.Delete(accountKey)
+		_ = m.storage.Delete(renewKey)
+		_ = m.DeleteTokenSession(tokenValue)
 
 	// Default Unknown event type | 未知事件类型（默认删除）
 	default:

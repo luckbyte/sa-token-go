@@ -14,7 +14,7 @@ var oauth2Server *core.OAuth2Server
 
 func main() {
 	storage := memory.NewStorage()
-	oauth2Server = core.NewOAuth2Server(storage)
+	oauth2Server = core.NewOAuth2Server(storage, "satoken:")
 
 	registerClients()
 

@@ -12,6 +12,7 @@
 
 - [登录认证](guide/authentication_zh.md) - 登录、登出、Token管理
 - [权限验证](guide/permission_zh.md) - 权限系统详解、通配符使用
+- [路径鉴权](guide/path-auth_zh.md) - 路径鉴权与 Ant 风格匹配
 - [注解使用](guide/annotation_zh.md) - 装饰器模式详解
 - [事件监听](guide/listener_zh.md) - 事件系统使用指南
 - [JWT集成](guide/jwt_zh.md) - JWT Token配置和使用
@@ -26,6 +27,10 @@
 ### 🔧 API文档
 
 - [StpUtil API](api/stputil_zh.md) - 全局工具类完整API
+
+### 工程维护
+
+- [风格改造 PR 审查清单](engineering/style-variance.md) - 语义不变类改动的合并门槛
 
 ### 🏗️ 设计文档
 
@@ -43,7 +48,23 @@
 - [jwt-example](../examples/jwt-example/) - JWT使用示例
 - [redis-example](../examples/redis-example/) - Redis存储示例
 - [listener-example](../examples/listener-example/) - 事件监听示例
-- [gin/echo/fiber/chi](../examples/) - 框架集成示例
+- [gin-simple](../examples/gin/gin-simple/) - Gin 最简集成示例
+- [gin-example](../examples/gin/gin-example/) - Gin 配置化集成示例
+- [echo-example](../examples/echo/echo-example/) - Echo 集成示例
+- [fiber-example](../examples/fiber/fiber-example/) - Fiber 集成示例
+- [chi-example](../examples/chi/chi-example/) - Chi 集成示例
+- [gf-example](../examples/gf/) - GoFrame 集成示例
+- [kratos-example](../examples/kratos/kratos-example/) - Kratos 集成示例
+- [hertz-example](../examples/hertz/herz-example/) - Hertz 集成示例
+
+### 🔄 集成能力更新说明
+
+- 所有集成插件已支持 `TokenInterceptor()`：
+  - Token 统一提取顺序：`Header -> Cookie -> Query(apikey)`。
+  - 自动走 `CutTokenPrefix`，支持 `TokenPrefix`。
+  - 当 `TokenName` 为空白时，自动回退读取 `Authorization`。
+- 所有集成插件均提供 `GetTokenFromCtx(...)`：
+  - 业务处理器中可直接读取拦截器解析后的 token，避免重复解析 Header/Cookie。
 
 ## 🔗 外部资源
 

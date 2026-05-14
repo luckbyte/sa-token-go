@@ -50,7 +50,7 @@ func defaultErrorHandler(ctx context.Context, err error) error {
 		reason = getReasonFromCode(code)
 	}
 
-	return errors.Errorf(httpStatus, reason, message)
+	return errors.Errorf(httpStatus, reason, "%s", message)
 }
 
 // ========== Option模式 ==========

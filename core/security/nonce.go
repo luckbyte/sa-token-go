@@ -44,7 +44,7 @@ type NonceManager struct {
 }
 
 // NewNonceManager Creates a new nonce manager | 创建新的Nonce管理器
-// prefix: key prefix (e.g., "satoken:" or "" for Java compatibility) | 键前缀（如："satoken:" 或 "" 兼容Java）
+// prefix: Redis key namespace (e.g. "satoken:" or "" for bare keys) | 键前缀（如 "satoken:" 或空前缀）
 // ttl: time to live, default 5 minutes | 过期时间，默认5分钟
 func NewNonceManager(storage adapter.Storage, prefix string, ttl time.Duration) *NonceManager {
 	if ttl == 0 {

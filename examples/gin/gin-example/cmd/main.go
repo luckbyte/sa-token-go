@@ -45,10 +45,16 @@ func main() {
 
 	// 受保护路由
 	protected := r.Group("/api")
-	protected.Use(plugin.AuthMiddleware())
+	// 先做 Token 拦截，再做登录校验：便于后续业务直接读取解析后的 token
+	protected.Use(plugin.TokenInterceptor(), plugin.AuthMiddleware())
 	{
+		protected.GET("/token", func(c *gin.Context) {
+			c.JSON(200, gin.H{"tokenFromCtx": sagin.GetTokenFromCtx(c)})
+		})
 		protected.GET("/user", plugin.UserInfoHandler)
-		protected.GET("/admin", plugin.AdminOnlyHandler)
+		protected.GET("/admin", plugin.PermissionRequired("admin:*"), func(c *gin.Context) {
+			c.JSON(200, gin.H{"message": "admin ok"})
+		})
 	}
 
 	// 启动服务器

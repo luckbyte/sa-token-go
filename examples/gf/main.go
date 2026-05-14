@@ -40,10 +40,18 @@ func main() {
 		)
 	})
 	s.BindHandler("/login", plugin.LoginHandler)
-	// 受保护路由
-	protected := s.Group("/api").Middleware(plugin.AuthMiddleware())
+	// 受保护路由：先做 token 拦截，再做鉴权
+	protected := s.Group("/api").Middleware(plugin.TokenInterceptor(), plugin.AuthMiddleware())
 
 	{
+		protected.GET("/token", func(r *ghttp.Request) {
+			r.Response.WriteStatusExit(
+				http.StatusOK,
+				g.Map{
+					"tokenFromCtx": sagin.GetTokenFromCtx(r),
+				},
+			)
+		})
 		protected.GET("/user", plugin.UserInfoHandler)
 	}
 

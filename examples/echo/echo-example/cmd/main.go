@@ -40,8 +40,15 @@ func main() {
 
 	// 受保护路由
 	api := e.Group("/api")
+	// 推荐链路：TokenInterceptor 统一取 token（Header/Cookie/Query）+ AuthMiddleware 校验登录
+	api.Use(plugin.TokenInterceptor())
 	api.Use(plugin.AuthMiddleware())
 	{
+		api.GET("/token", func(c echo.Context) error {
+			return c.JSON(200, map[string]interface{}{
+				"tokenFromCtx": saecho.GetTokenFromCtx(c),
+			})
+		})
 		api.GET("/user/info", func(c echo.Context) error {
 			saCtx, _ := saecho.GetSaToken(c)
 			loginID, _ := saCtx.GetLoginID()

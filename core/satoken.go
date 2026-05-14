@@ -21,6 +21,10 @@ import (
 // Version Sa-Token-Go version | Sa-Token-Go版本
 const Version = version.Version
 
+// AuthHeaderName 标准 Authorization 头名（与 context.AuthHeaderName 一致，供业务层常量引用）
+// AuthHeaderName is the standard Authorization header name
+const AuthHeaderName = context.AuthHeaderName
+
 // ============ Exported Types | 导出的类型 ============
 // Export main types and functions for external use | 导出主要类型和函数，方便外部使用
 
@@ -124,10 +128,10 @@ var (
 	MatchPattern = utils.MatchPattern
 
 	// Router utilities | 路由工具
-	MatchPath        = router.MatchPath
-	MatchAny         = router.MatchAny
-	NeedAuth         = router.NeedAuth
-	ProcessAuth      = router.ProcessAuth
+	MatchPath         = router.MatchPath
+	MatchAny          = router.MatchAny
+	NeedAuth          = router.NeedAuth
+	ProcessAuth       = router.ProcessAuth
 	NewPathAuthConfig = router.NewPathAuthConfig
 
 	// Duration utilities | 时长工具
@@ -138,6 +142,10 @@ var (
 	SHA256Hash   = utils.SHA256Hash
 	Base64Encode = utils.Base64Encode
 	Base64Decode = utils.Base64Decode
+
+	// Token read helpers → integrations + SaTokenContext
+	ResolveTokenName     = context.ResolveTokenName
+	ReadTokenFromRequest = context.ReadTokenFromRequest
 )
 
 // ============ Factory Functions | 工厂函数 ============

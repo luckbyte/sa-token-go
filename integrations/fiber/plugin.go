@@ -19,6 +19,17 @@ func NewPlugin(manager *core.Manager) *Plugin {
 	}
 }
 
+const satokenTokenCtxKey = "satoken_token"
+
+// TokenInterceptor 解析 token 写入 Locals，不做登录校验
+func (p *Plugin) TokenInterceptor() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		tok := core.ReadTokenFromRequest(NewFiberContext(c), p.manager)
+		c.Locals(satokenTokenCtxKey, tok)
+		return c.Next()
+	}
+}
+
 // AuthMiddleware authentication middleware | 认证中间件
 func (p *Plugin) AuthMiddleware() fiber.Handler {
 	return func(c *fiber.Ctx) error {
@@ -38,10 +49,8 @@ func (p *Plugin) AuthMiddleware() fiber.Handler {
 func (p *Plugin) PathAuthMiddleware(config *core.PathAuthConfig) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		path := c.Path()
-		token := c.Get(p.manager.GetConfig().TokenName)
-		if token == "" {
-			token = c.Cookies(p.manager.GetConfig().TokenName)
-		}
+		ctx := NewFiberContext(c)
+		token := core.ReadTokenFromRequest(ctx, p.manager)
 
 		result := core.ProcessAuth(path, token, config, p.manager)
 
@@ -123,6 +132,16 @@ func (p *Plugin) LoginHandler(c *fiber.Ctx) error {
 	return writeSuccessResponse(c, fiber.Map{
 		"token": token,
 	})
+}
+
+// GetTokenFromCtx 获取 TokenInterceptor 写入的 token
+func GetTokenFromCtx(c *fiber.Ctx) string {
+	if v := c.Locals(satokenTokenCtxKey); v != nil {
+		if s, ok := v.(string); ok {
+			return s
+		}
+	}
+	return ""
 }
 
 // GetSaToken 从Fiber上下文获取Sa-Token上下文

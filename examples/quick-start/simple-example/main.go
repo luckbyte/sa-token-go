@@ -22,7 +22,8 @@ func init() {
 }
 
 func main() {
-	fmt.Println("=== Sa-Token-Go 简洁使用示例 ===\n")
+	fmt.Println("=== Sa-Token-Go 简洁使用示例 ===")
+	fmt.Println()
 
 	// 1. 登录（支持多种类型）
 	fmt.Println("1. 登录测试")

@@ -8,14 +8,14 @@ import (
 )
 
 func main() {
-	fmt.Println("🔄 Java sa-token 兼容性演示")
+	fmt.Println("🔄 KeyPrefix 模式演示（默认带前缀 / 空前缀）")
 	fmt.Println("=" + "────────────────────────────────────────────────────────────" + "=")
 	fmt.Println()
 
 	storage := memory.NewStorage()
 
 	// 方式1: Go 默认配置（带前缀 "satoken:"）
-	fmt.Println("【方式1】Go 默认配置 - 使用前缀 'satoken:'")
+	fmt.Println("【方式1】默认配置 - 使用前缀 'satoken:'")
 	mgr1 := core.NewBuilder().
 		Storage(storage).
 		TokenName("satoken").  // 使用默认的 token 名称
@@ -31,19 +31,19 @@ func main() {
 	fmt.Println("   - satoken:session:user001")
 	fmt.Println()
 
-	// 方式2: Java sa-token 兼容配置（无前缀）
-	fmt.Println("【方式2】Java 兼容配置 - 无前缀（与Java默认行为一致）")
+	// 方式2: 空前缀（键名更短，与常见「无前缀」部署一致）
+	fmt.Println("【方式2】空前缀 — 与使用 KeyPrefix(\"\") 的已有服务同库时常用")
 	storage2 := memory.NewStorage()
 	mgr2 := core.NewBuilder().
 		Storage(storage2).
-		TokenName("satoken"). // 必须与 Java 端配置一致
-		KeyPrefix("").        // 空前缀，兼容 Java sa-token
+		TokenName("satoken"). // 与对端约定同名即可
+		KeyPrefix("").        // 不加包级前缀
 		IsPrintBanner(false).
 		Build()
 
 	token2, _ := mgr2.Login("user002", "web")
 	fmt.Printf("✅ 登录成功，Token: %s\n", token2)
-	fmt.Println("   Redis Keys 示例（兼容Java）:")
+	fmt.Println("   Redis Keys 示例：")
 	fmt.Println("   - token:" + token2)
 	fmt.Println("   - account:user002:web")
 	fmt.Println("   - session:user002")
@@ -71,7 +71,7 @@ func main() {
 	fmt.Println("=" + "────────────────────────────────────────────────────────────" + "=")
 	fmt.Println("📝 关键配置说明:")
 	fmt.Println()
-	fmt.Println("1. 与 Java sa-token 互通:")
+	fmt.Println("1. 异构或多实例共库：")
 	fmt.Println("   cfg.SetKeyPrefix(\"\")  // 设置为空字符串")
 	fmt.Println("   或")
 	fmt.Println("   builder.KeyPrefix(\"\")  // Builder 方式")

@@ -21,6 +21,7 @@ type server struct {
 
 func (s server) GetUserInfo(ctx context.Context, request *v1.GetUserInfoRequest) (*v1.GetUserInfoReply, error) {
 	fmt.Println("==============GetUserInfo==============")
+	fmt.Printf("tokenFromCtx=%s\n", sakratos.GetTokenFromCtx(ctx))
 
 	return &v1.GetUserInfoReply{}, nil
 }
@@ -52,6 +53,8 @@ func main() {
 	httpSrv := http.NewServer(
 		http.Address(":8000"),
 		http.Middleware(
+			// 先提取 token 并写入 context，再进入规则鉴权中间件
+			saPlugin.TokenInterceptor(),
 			saPlugin.Server(),
 		),
 	)

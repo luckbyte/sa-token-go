@@ -24,6 +24,25 @@ func init() {
 }
 ```
 
+## New Capabilities (Plan Updates)
+
+The following APIs were added/strengthened in the recent feature plans:
+
+- Context login identity resolution:
+  - `SetTokenValueToCtx`
+  - `GetTokenValueFromCtx`
+  - `GetLoginIDFromCtx`
+  - `SwitchTo` / `SwitchToFunc` / `GetSwitchLoginID`
+- Safe auth:
+  - `OpenSafe` / `CheckSafe` / `IsSafe` / `CloseSafe` / `GetSafeTime`
+- Tiered disable:
+  - `DisableLevel` / `GetDisableLevel` / `CheckDisableLevel` / `UntieDisableServices`
+- Overrun replacement and terminal/search:
+  - `Replaced` / `ReplacedByToken`
+  - `GetTerminalListByLoginID` / `GetTerminalInfo`
+  - `IsTrustDeviceID` / `AddTrustDeviceID`
+  - `SearchTokenValue` / `SearchSessionID` / `SearchTokenSessionID`
+
 ## Authentication API
 
 ### Login
@@ -132,6 +151,90 @@ func Kickout(loginID interface{}, device ...string) error
 ```go
 stputil.Kickout(1000)
 stputil.Kickout(1000, "mobile")
+```
+
+### Replaced
+
+Mark token(s) as replaced (overrun logout semantics).
+
+**Signature**:
+```go
+func Replaced(loginID interface{}, device ...string) error
+func ReplacedByToken(tokenValue string) error
+```
+
+**Example**:
+```go
+_ = stputil.Replaced(1000, "mobile")
+_ = stputil.ReplacedByToken(token)
+```
+
+## Context Identity API
+
+### SetTokenValueToCtx / GetLoginIDFromCtx
+
+Attach token to `context.Context`, then resolve loginID from context with `SwitchTo` priority.
+
+**Signature**:
+```go
+func SetTokenValueToCtx(parent context.Context, token string) context.Context
+func GetTokenValueFromCtx(ctx context.Context) string
+func GetLoginIDFromCtx(ctx context.Context) (string, error)
+```
+
+**Example**:
+```go
+ctx := context.Background()
+ctx = stputil.SetTokenValueToCtx(ctx, token)
+loginID, err := stputil.GetLoginIDFromCtx(ctx)
+```
+
+### SwitchTo
+
+Temporarily switch login identity in context.
+
+**Signature**:
+```go
+func SwitchTo(parent context.Context, loginID interface{}) context.Context
+func SwitchToFunc(parent context.Context, loginID interface{}, fn func(ctx context.Context) error) error
+func GetSwitchLoginID(ctx context.Context) string
+func IsSwitch(ctx context.Context) bool
+```
+
+## Safe Auth API
+
+**Signature**:
+```go
+func OpenSafe(tokenValue, service string, safeTime int64) error
+func IsSafe(tokenValue, service string) bool
+func CheckSafe(tokenValue, service string) error
+func CloseSafe(tokenValue, service string) error
+func GetSafeTime(tokenValue, service string) (int64, error)
+```
+
+## Tiered Disable API
+
+**Signature**:
+```go
+func DisableLevel(loginID interface{}, service string, level int, duration time.Duration) error
+func GetDisableLevel(loginID interface{}, service string) int
+func IsDisableLevel(loginID interface{}, service string, level int) bool
+func CheckDisableLevel(loginID interface{}, service string, level int) error
+func UntieDisableServices(loginID interface{}, services ...string) error
+```
+
+## Terminal & Search API
+
+**Signature**:
+```go
+func GetTerminalListByLoginID(loginID interface{}, device ...string) ([]string, error)
+func GetTerminalInfo(tokenValue string) (*manager.TokenInfo, error)
+func IsTrustDeviceID(loginID interface{}, deviceID string) bool
+func AddTrustDeviceID(loginID interface{}, deviceID string) error
+
+func SearchTokenValue(keyword string, start, size int, asc bool) ([]string, error)
+func SearchSessionID(keyword string, start, size int, asc bool) ([]string, error)
+func SearchTokenSessionID(keyword string, start, size int, asc bool) ([]string, error)
 ```
 
 ## Permission Verification API

@@ -1,10 +1,13 @@
 package stputil
 
 import (
+	"context"
 	"fmt"
 	"sync"
 	"time"
 
+	core "github.com/click33/sa-token-go/core"
+	"github.com/click33/sa-token-go/core/adapter"
 	"github.com/click33/sa-token-go/core/manager"
 	"github.com/click33/sa-token-go/core/oauth2"
 	"github.com/click33/sa-token-go/core/security"
@@ -46,7 +49,7 @@ func CloseManager() {
 	}
 }
 
-// ============ StpLogic ============
+// StpLogic — global facade
 
 // SetStpLogic sets the global StpLogic instance | 设置全局 StpLogic 实例
 func SetStpLogic(logic *StpLogic) {
@@ -359,7 +362,7 @@ func CheckDisable(tokenValue string) error {
 		return err
 	}
 	if IsDisable(loginID) {
-		return fmt.Errorf("account is disabled")
+		return core.NewAccountDisabledError(loginID)
 	}
 	return nil
 }
@@ -371,7 +374,7 @@ func CheckPermission(tokenValue string, permission string) error {
 		return err
 	}
 	if !HasPermission(loginID, permission) {
-		return fmt.Errorf("permission denied: %s", permission)
+		return core.NewPermissionDeniedError(permission)
 	}
 	return nil
 }
@@ -383,7 +386,7 @@ func CheckPermissionAnd(tokenValue string, permissions []string) error {
 		return err
 	}
 	if !HasPermissionsAnd(loginID, permissions) {
-		return fmt.Errorf("permission denied: %v", permissions)
+		return core.NewPermissionDeniedListError(permissions)
 	}
 	return nil
 }
@@ -395,7 +398,7 @@ func CheckPermissionOr(tokenValue string, permissions []string) error {
 		return err
 	}
 	if !HasPermissionsOr(loginID, permissions) {
-		return fmt.Errorf("permission denied: %v", permissions)
+		return core.NewPermissionDeniedListError(permissions)
 	}
 	return nil
 }
@@ -416,7 +419,7 @@ func CheckRole(tokenValue string, role string) error {
 		return err
 	}
 	if !HasRole(loginID, role) {
-		return fmt.Errorf("role denied: %s", role)
+		return core.NewRoleDeniedError(role)
 	}
 	return nil
 }
@@ -428,7 +431,7 @@ func CheckRoleAnd(tokenValue string, roles []string) error {
 		return err
 	}
 	if !HasRolesAnd(loginID, roles) {
-		return fmt.Errorf("role denied: %v", roles)
+		return core.NewRoleDeniedListError(roles)
 	}
 	return nil
 }
@@ -440,7 +443,7 @@ func CheckRoleOr(tokenValue string, roles []string) error {
 		return err
 	}
 	if !HasRolesOr(loginID, roles) {
-		return fmt.Errorf("role denied: %v", roles)
+		return core.NewRoleDeniedListError(roles)
 	}
 	return nil
 }
@@ -454,7 +457,138 @@ func GetRoleList(tokenValue string) ([]string, error) {
 	return GetRoles(loginID)
 }
 
-// GetTokenSession gets session for the token | 获取Token对应的Session
+// GetTokenSession loads Token-Session (token-scoped) | 获取 Token-Session
 func GetTokenSession(tokenValue string) (*session.Session, error) {
-	return GetSessionByToken(tokenValue)
+	return globalLogic.GetTokenSession(tokenValue)
+}
+
+// GetTokenSessionOrCreate loads or creates Token-Session | 获取或创建 Token-Session
+func GetTokenSessionOrCreate(tokenValue string) (*session.Session, error) {
+	return globalLogic.GetTokenSessionOrCreate(tokenValue)
+}
+
+// GetAnonTokenSession anonymous Token-Session | 匿名 Token-Session
+func GetAnonTokenSession(currentToken string, ctx adapter.RequestContext) (*session.Session, error) {
+	return globalLogic.GetAnonTokenSession(currentToken, ctx)
+}
+
+// DeleteTokenSession removes Token-Session | 删除 Token-Session
+func DeleteTokenSession(tokenValue string) error {
+	return globalLogic.DeleteTokenSession(tokenValue)
+}
+
+// Replaced overrun logout | 顶号下线
+func Replaced(loginID interface{}, device ...string) error {
+	return globalLogic.Replaced(toString(loginID), device...)
+}
+
+// ReplacedByToken overrun logout by token | 按 Token 顶号下线
+func ReplacedByToken(tokenValue string) error {
+	return globalLogic.ReplacedByToken(tokenValue)
+}
+
+// KickoutByToken kicks by token | 按 Token 踢下线
+func KickoutByToken(tokenValue string) error {
+	return globalLogic.KickoutByToken(tokenValue)
+}
+
+// SetTokenValueToCtx writes token into context for downstream GetLoginIDFromCtx | 将 Token 写入上下文
+func SetTokenValueToCtx(parent context.Context, token string) context.Context {
+	return context.WithValue(parent, TokenValueKey, token)
+}
+
+// GetLoginIDFromCtx prefers SwitchTo loginId, else resolves token from context | 优先 SwitchTo，再从 Token 解析
+func GetLoginIDFromCtx(ctx context.Context) (string, error) {
+	if id := GetSwitchLoginID(ctx); id != "" {
+		return id, nil
+	}
+	tv := GetTokenValueFromCtx(ctx)
+	if tv == "" {
+		return "", core.ErrNotLogin
+	}
+	return GetLoginID(tv)
+}
+
+// GetTokenValueFromCtx reads token from context key stputil.TokenValueKey if set | 从上下文取 Token
+func GetTokenValueFromCtx(ctx context.Context) string {
+	if v := ctx.Value(TokenValueKey); v != nil {
+		if s, ok := v.(string); ok {
+			return s
+		}
+	}
+	return ""
+}
+
+// GetTokenInfoFromCtx builds token info using GetTokenValueFromCtx | 从上下文取 TokenInfo
+func GetTokenInfoFromCtx(ctx context.Context) (*manager.TokenInfo, error) {
+	tv := GetTokenValueFromCtx(ctx)
+	if tv == "" {
+		return nil, core.ErrNotLogin
+	}
+	return GetTokenInfo(tv)
+}
+
+// UpdateLastActiveToNow updates active time | 更新活跃时间
+func UpdateLastActiveToNow(tokenValue string) error {
+	return globalLogic.UpdateLastActiveToNow(tokenValue)
+}
+
+func GetTokenLastActiveTime(tokenValue string) (int64, error) {
+	return globalLogic.GetTokenLastActiveTime(tokenValue)
+}
+
+func CheckActiveTimeout(tokenValue string) error {
+	return globalLogic.CheckActiveTimeout(tokenValue)
+}
+
+func GetTokenTimeout(tokenValue string) (int64, error) {
+	return globalLogic.GetTokenTimeout(tokenValue)
+}
+
+func GetSessionTimeout(loginID interface{}) (int64, error) {
+	return globalLogic.GetSessionTimeout(toString(loginID))
+}
+
+func GetTokenSessionTimeout(tokenValue string) (int64, error) {
+	return globalLogic.GetTokenSessionTimeout(tokenValue)
+}
+
+func RenewTimeout(tokenValue string, sec int64) error {
+	return globalLogic.RenewTimeout(tokenValue, sec)
+}
+
+func SearchTokenValue(keyword string, start, size int, asc bool) ([]string, error) {
+	return globalLogic.SearchTokenValue(keyword, start, size, asc)
+}
+
+func SearchSessionID(keyword string, start, size int, asc bool) ([]string, error) {
+	return globalLogic.SearchSessionID(keyword, start, size, asc)
+}
+
+func SearchTokenSessionID(keyword string, start, size int, asc bool) ([]string, error) {
+	return globalLogic.SearchTokenSessionID(keyword, start, size, asc)
+}
+
+func GetTokenValueByLoginID(loginID interface{}, device ...string) (string, error) {
+	return globalLogic.GetTokenValueByLoginID(loginID, device...)
+}
+
+func GetTerminalListByLoginID(loginID interface{}, device ...string) ([]string, error) {
+	return globalLogic.GetTerminalListByLoginID(toString(loginID), device...)
+}
+
+func GetTerminalInfo(tokenValue string) (*manager.TokenInfo, error) {
+	return globalLogic.GetTerminalInfo(tokenValue)
+}
+
+func GetLoginDeviceType(tokenValue string) (string, error) {
+	return globalLogic.GetLoginDeviceType(tokenValue)
+}
+
+func GetLoginDeviceID(tokenValue string) (string, error) {
+	return globalLogic.GetLoginDeviceID(tokenValue)
+}
+
+func IsTrustDeviceID(loginID interface{}, deviceID string) bool {
+	return globalLogic.IsTrustDeviceID(toString(loginID), deviceID)
 }

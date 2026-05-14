@@ -9,7 +9,8 @@ import (
 )
 
 func main() {
-	fmt.Println("=== Sa-Token-Go JWT Example ===\n")
+	fmt.Println("=== Sa-Token-Go JWT Example ===")
+	fmt.Println()
 
 	// 初始化使用 JWT Token 风格
 	stputil.SetManager(
@@ -51,7 +52,8 @@ func main() {
 	stputil.SetPermissions(1000, []string{"user:read", "user:write", "admin:*"})
 	stputil.SetRoles(1000, []string{"admin", "user"})
 	fmt.Println("已设置权限: user:read, user:write, admin:*")
-	fmt.Println("已设置角色: admin, user\n")
+	fmt.Println("已设置角色: admin, user")
+	fmt.Println()
 
 	fmt.Println("4. 检查权限")
 	if stputil.HasPermission(1000, "user:read") {

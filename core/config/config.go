@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+
 	"github.com/click33/sa-token-go/core/pool"
 )
 
@@ -119,7 +120,7 @@ type Config struct {
 	IsPrintBanner bool
 
 	// KeyPrefix Storage key prefix for Redis isolation (default: "satoken:") | 存储键前缀，用于Redis隔离（默认："satoken:"）
-	// Set to empty "" to be compatible with Java sa-token default behavior | 设置为空""以兼容Java sa-token默认行为
+	// Empty string: no global key-prefix segment for stored keys | 空字符串表示键名不加统一前缀片段
 	KeyPrefix string
 
 	// CookieConfig Cookie configuration | Cookie配置
@@ -127,6 +128,60 @@ type Config struct {
 
 	// RenewPoolConfig Configuration for renewal pool manager | 续期池配置
 	RenewPoolConfig *pool.RenewPoolConfig
+
+	// LoginType realm tag for multi-account setups (default "login") | 多账号体系标识
+	LoginType string
+
+	// RightNowCreateTokenSession eagerly create Token-Session on login | 登录时立即创建 Token-Session
+	RightNowCreateTokenSession bool
+
+	// IsLogoutKeepTokenSession keep Token-Session after logout | 注销后保留 Token-Session
+	IsLogoutKeepTokenSession bool
+
+	// ReplacedRange overrun logout scope: CURR_DEVICE / ALL_DEVICE | 顶号下线范围
+	ReplacedRange string
+
+	// OverflowLogoutMode when MaxLoginCount exceeded: LOGOUT / KICKOUT / REPLACED | 溢出并发登录处理
+	OverflowLogoutMode string
+
+	// TokenPrefix bearer prefix in header e.g. "Bearer " | Token 前缀
+	TokenPrefix string
+
+	// SafeAuthDefaultService default second-level auth service tag | 二级认证默认 service
+	SafeAuthDefaultService string
+
+	// SsoServer optional SSO server plugin config | SSO 服务端子配置
+	SsoServer *SsoServerPluginConfig
+
+	// SsoClient optional SSO client plugin config | SSO 客户端子配置
+	SsoClient *SsoClientPluginConfig
+
+	// OAuth2Server optional OAuth2 server plugin config | OAuth2 服务端子配置
+	OAuth2Server *OAuth2ServerPluginConfig
+}
+
+// SsoServerPluginConfig placeholder for plugins/sso/server | SSO Server 插件配置占位
+type SsoServerPluginConfig struct {
+	TicketTimeoutSec int64
+	AllowURL         string
+	IsSlo            bool
+	SecretKey        string
+}
+
+// SsoClientPluginConfig placeholder for plugins/sso/client | SSO Client 插件配置占位
+type SsoClientPluginConfig struct {
+	ServerURL string
+	ClientID  string
+	SecretKey string
+	AllowURL  string
+}
+
+// OAuth2ServerPluginConfig placeholder for extended OAuth2 routes | OAuth2 插件配置占位
+type OAuth2ServerPluginConfig struct {
+	AuthorizePath string
+	TokenPath     string
+	RefreshPath   string
+	RevokePath    string
 }
 
 // CookieConfig Cookie configuration | Cookie配置
@@ -153,25 +208,32 @@ type CookieConfig struct {
 // DefaultConfig Returns default configuration | 返回默认配置
 func DefaultConfig() *Config {
 	return &Config{
-		TokenName:              DefaultTokenName,
-		Timeout:                DefaultTimeout,
-		MaxRefresh:             DefaultTimeout / 2,
-		RenewInterval:          NoLimit,
-		ActiveTimeout:          NoLimit,
-		IsConcurrent:           true,
-		IsShare:                true,
-		MaxLoginCount:          DefaultMaxLoginCount,
-		IsReadBody:             false,
-		IsReadHeader:           true,
-		IsReadCookie:           false,
-		TokenStyle:             TokenStyleUUID,
-		DataRefreshPeriod:      NoLimit,
-		TokenSessionCheckLogin: true,
-		AutoRenew:              true,
-		JwtSecretKey:           "",
-		IsLog:                  false,
-		IsPrintBanner:          true,
-		KeyPrefix:              "satoken:",
+		TokenName:                  DefaultTokenName,
+		Timeout:                    DefaultTimeout,
+		MaxRefresh:                 DefaultTimeout / 2,
+		RenewInterval:              NoLimit,
+		ActiveTimeout:              NoLimit,
+		IsConcurrent:               true,
+		IsShare:                    true,
+		MaxLoginCount:              DefaultMaxLoginCount,
+		IsReadBody:                 false,
+		IsReadHeader:               true,
+		IsReadCookie:               false,
+		TokenStyle:                 TokenStyleUUID,
+		DataRefreshPeriod:          NoLimit,
+		TokenSessionCheckLogin:     true,
+		AutoRenew:                  true,
+		JwtSecretKey:               "",
+		IsLog:                      false,
+		IsPrintBanner:              true,
+		KeyPrefix:                  "satoken:",
+		LoginType:                  "login",
+		RightNowCreateTokenSession: false,
+		IsLogoutKeepTokenSession:   false,
+		ReplacedRange:              "CURR_DEVICE",
+		OverflowLogoutMode:         "LOGOUT",
+		TokenPrefix:                "",
+		SafeAuthDefaultService:     "important",
 		CookieConfig: &CookieConfig{
 			Domain:   "",
 			Path:     DefaultCookiePath,
@@ -277,7 +339,27 @@ func (c *Config) Clone() *Config {
 		cookieConfig := *c.CookieConfig
 		newConfig.CookieConfig = &cookieConfig
 	}
+	if c.SsoServer != nil {
+		ss := *c.SsoServer
+		newConfig.SsoServer = &ss
+	}
+	if c.SsoClient != nil {
+		sc := *c.SsoClient
+		newConfig.SsoClient = &sc
+	}
+	if c.OAuth2Server != nil {
+		o2 := *c.OAuth2Server
+		newConfig.OAuth2Server = &o2
+	}
 	return &newConfig
+}
+
+// EffectiveLoginType returns configured LoginType or default "login" | 返回生效的 LoginType
+func (c *Config) EffectiveLoginType() string {
+	if c == nil || c.LoginType == "" {
+		return "login"
+	}
+	return c.LoginType
 }
 
 // SetTokenName Set Token name | 设置Token名称

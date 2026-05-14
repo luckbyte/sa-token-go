@@ -99,5 +99,5 @@ func main() {
 	fmt.Printf("\n✅ 设计原则验证成功！\n")
 	fmt.Printf("   • Token 键中只存储 loginID（轻量级）\n")
 	fmt.Printf("   • 完整 User 对象存储在 Account-Session 中\n")
-	fmt.Printf("   • 完全符合 Java sa-token 的设计理念\n")
+	fmt.Printf("   • 与会话模型设计文档一致的分层方式\n")
 }

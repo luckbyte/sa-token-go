@@ -12,6 +12,7 @@ use (
 	./integrations/gin
 	./integrations/hertz
 	./integrations/kratos
+	./plugins/sso
 	./storage/memory
 	./storage/redis
 	./stputil

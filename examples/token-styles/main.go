@@ -11,7 +11,8 @@ import (
 
 func main() {
 	fmt.Println("Sa-Token-Go Token Styles Demo")
-	fmt.Println("========================================\n")
+	fmt.Println("========================================")
+	fmt.Println()
 
 	// Demo all token styles
 	// 演示所有 Token 风格

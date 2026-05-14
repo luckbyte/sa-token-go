@@ -29,6 +29,18 @@ func NewPlugin(manager *core.Manager) *Plugin {
 	}
 }
 
+const satokenTokenCtxKey = "satoken_token"
+
+// TokenInterceptor 解析 token 写入 GoFrame 请求上下文变量
+func (p *Plugin) TokenInterceptor() ghttp.HandlerFunc {
+	return func(r *ghttp.Request) {
+		ctx := NewGFContext(r)
+		tok := core.ReadTokenFromRequest(ctx, p.manager)
+		r.SetCtxVar(satokenTokenCtxKey, tok)
+		r.Middleware.Next()
+	}
+}
+
 // AuthMiddleware authentication middleware | 认证中间件
 func (p *Plugin) AuthMiddleware() ghttp.HandlerFunc {
 	return func(r *ghttp.Request) {
@@ -51,10 +63,8 @@ func (p *Plugin) AuthMiddleware() ghttp.HandlerFunc {
 func (p *Plugin) PathAuthMiddleware(config *core.PathAuthConfig) ghttp.HandlerFunc {
 	return func(r *ghttp.Request) {
 		path := r.Request.URL.Path
-		token := r.Header.Get(p.manager.GetConfig().TokenName)
-		if token == "" {
-			token = r.Cookie.Get(p.manager.GetConfig().TokenName).String()
-		}
+		ctx := NewGFContext(r)
+		token := core.ReadTokenFromRequest(ctx, p.manager)
 
 		result := core.ProcessAuth(path, token, config, p.manager)
 
@@ -272,6 +282,14 @@ func (p *Plugin) UserInfoHandler(r *ghttp.Request) {
 		"permissions": permissions,
 		"roles":       roles,
 	})
+}
+
+// GetTokenFromCtx 读取 TokenInterceptor 写入的 token
+func GetTokenFromCtx(r *ghttp.Request) string {
+	if r == nil {
+		return ""
+	}
+	return r.GetCtxVar(satokenTokenCtxKey).String()
 }
 
 // GetSaToken 从GoFrame上下文获取Sa-Token上下文

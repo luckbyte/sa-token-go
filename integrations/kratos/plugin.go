@@ -44,6 +44,19 @@ func NewPlugin(manager *core.Manager, opts ...*PluginOptions) *Plugin {
 	return plugin
 }
 
+const satokenTokenCtxKey = "satoken_token"
+
+// TokenInterceptor 将解析到的 token 放入 context.Context，供下游读取
+func (e *Plugin) TokenInterceptor() middleware.Middleware {
+	return func(handler middleware.Handler) middleware.Handler {
+		return func(ctx context.Context, req interface{}) (interface{}, error) {
+			tok := core.ReadTokenFromRequest(NewKratosContext(ctx), e.manager)
+			ctx = context.WithValue(ctx, satokenTokenCtxKey, tok)
+			return handler(ctx, req)
+		}
+	}
+}
+
 // Server 返回Kratos中间件
 func (e *Plugin) Server() middleware.Middleware {
 	return func(handler middleware.Handler) middleware.Handler {
@@ -373,6 +386,19 @@ func (e *Plugin) findRule(operation string) (Rule, bool) {
 
 func (e *Plugin) addRule(rule Rule) {
 	e.rules = append(e.rules, rule)
+}
+
+// GetTokenFromCtx 从 Kratos 处理链的 context 中读取 TokenInterceptor 写入的 token
+func GetTokenFromCtx(ctx context.Context) string {
+	if ctx == nil {
+		return ""
+	}
+	if v := ctx.Value(satokenTokenCtxKey); v != nil {
+		if s, ok := v.(string); ok {
+			return s
+		}
+	}
+	return ""
 }
 
 func matchPattern(pattern, str string) bool {

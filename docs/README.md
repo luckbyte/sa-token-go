@@ -12,6 +12,7 @@ English | [中文文档](README_zh.md)
 
 - [Authentication](guide/authentication.md) - Login, logout, token management
 - [Permission Verification](guide/permission.md) - Permission system, wildcard usage
+- [Path-Based Auth](guide/path-auth.md) - Path auth and ant-style route matching
 - [Annotations](guide/annotation.md) - Decorator pattern guide
 - [Event Listener](guide/listener.md) - Event system usage guide
 - [JWT Integration](guide/jwt.md) - JWT token configuration and usage
@@ -26,6 +27,10 @@ English | [中文文档](README_zh.md)
 ### 🔧 API Documentation
 
 - [StpUtil API](api/stputil.md) - Complete global utility API reference
+
+### Engineering
+
+- [Style variance & PR checklist](engineering/style-variance.md) - Semantic-safe refactor review
 
 ### 🏗️ Design Documentation
 
@@ -43,7 +48,23 @@ English | [中文文档](README_zh.md)
 - [jwt-example](../examples/jwt-example/) - JWT usage example
 - [redis-example](../examples/redis-example/) - Redis storage example
 - [listener-example](../examples/listener-example/) - Event listener example
-- [gin/echo/fiber/chi](../examples/) - Framework integration examples
+- [gin-simple](../examples/gin/gin-simple/) - Minimal gin integration example
+- [gin-example](../examples/gin/gin-example/) - Gin integration with config file
+- [echo-example](../examples/echo/echo-example/) - Echo integration example
+- [fiber-example](../examples/fiber/fiber-example/) - Fiber integration example
+- [chi-example](../examples/chi/chi-example/) - Chi integration example
+- [gf-example](../examples/gf/) - GoFrame integration example
+- [kratos-example](../examples/kratos/kratos-example/) - Kratos integration example
+- [hertz-example](../examples/hertz/herz-example/) - Hertz integration example
+
+### 🔄 Integration Upgrade Notes
+
+- All integration plugins now support `TokenInterceptor()`:
+  - Unified token extraction order: `Header -> Cookie -> Query(apikey)`.
+  - Respects `TokenPrefix` via `CutTokenPrefix`.
+  - Falls back to `Authorization` header when `TokenName` is blank.
+- All integration plugins provide `GetTokenFromCtx(...)`:
+  - Read the parsed token from framework context instead of manually parsing headers in handlers.
 
 ## 🔗 External Resources
 
