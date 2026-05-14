@@ -46,9 +46,3 @@ require (
 	google.golang.org/protobuf v1.36.11 // indirect
 )
 
-replace (
-	github.com/click33/sa-token-go/core => ../../../core
-	github.com/click33/sa-token-go/integrations/gin => ../../../integrations/gin
-	github.com/click33/sa-token-go/storage/memory => ../../../storage/memory
-	github.com/click33/sa-token-go/stputil => ../../../stputil
-)

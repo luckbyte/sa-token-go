@@ -2,12 +2,6 @@ module github.com/click33/sa-token-go/examples/gf-example
 
 go 1.25.0
 
-replace (
-	github.com/click33/sa-token-go/core => ../../core
-	github.com/click33/sa-token-go/integrations/gf => ../../integrations/gf
-	github.com/click33/sa-token-go/storage/memory => ../../storage/memory
-	github.com/click33/sa-token-go/stputil => ../../stputil
-)
 
 require (
 	github.com/click33/sa-token-go/integrations/gf v0.1.9

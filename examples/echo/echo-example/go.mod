@@ -27,9 +27,3 @@ require (
 	golang.org/x/time v0.15.0 // indirect
 )
 
-replace (
-	github.com/click33/sa-token-go/core => ../../../core
-	github.com/click33/sa-token-go/integrations/echo => ../../../integrations/echo
-	github.com/click33/sa-token-go/storage/memory => ../../../storage/memory
-	github.com/click33/sa-token-go/stputil => ../../../stputil
-)

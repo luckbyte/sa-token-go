@@ -4,4 +4,3 @@ go 1.25.0
 
 require github.com/click33/sa-token-go/core v0.1.9
 
-replace github.com/click33/sa-token-go/core => ../../core

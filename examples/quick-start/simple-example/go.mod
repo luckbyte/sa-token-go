@@ -15,8 +15,3 @@ require (
 	golang.org/x/sync v0.20.0 // indirect
 )
 
-replace (
-	github.com/click33/sa-token-go/core => ../../../core
-	github.com/click33/sa-token-go/storage/memory => ../../../storage/memory
-	github.com/click33/sa-token-go/stputil => ../../../stputil
-)

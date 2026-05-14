@@ -36,8 +36,3 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-replace (
-	github.com/click33/sa-token-go/core => ../../core
-	github.com/click33/sa-token-go/storage/memory => ../../storage/memory
-	github.com/click33/sa-token-go/stputil => ../../stputil
-)

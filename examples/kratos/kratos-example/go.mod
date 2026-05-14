@@ -12,12 +12,6 @@ require (
 	google.golang.org/protobuf v1.36.11
 )
 
-replace (
-	github.com/click33/sa-token-go/core => ../../../core
-	github.com/click33/sa-token-go/integrations/kratos => ../../../integrations/kratos
-	github.com/click33/sa-token-go/storage/memory => ../../../storage/memory
-	github.com/click33/sa-token-go/stputil => ../../../stputil
-)
 
 require (
 	github.com/click33/sa-token-go/core v0.1.9 // indirect
